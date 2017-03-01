@@ -9,12 +9,12 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
-	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 	"github.com/dakom/basic-site-api/lib/auth/jwt_scopes"
 	"github.com/dakom/basic-site-api/lib/datastore"
 	"github.com/dakom/basic-site-api/lib/pages"
 	"github.com/dakom/basic-site-api/lib/utils/text"
+	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
+	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 
 	"github.com/dgrijalva/jwt-go"
 )
@@ -22,19 +22,13 @@ import (
 const (
 	//descripes how the userid is used
 	JWT_USERTYPE_USER_RECORD string = "usr"
-	JWT_USERTYPE_APP_ID      string = "app"
 	JWT_USERTYPE_SYSTEM_ID   string = "sys"
 
 	JWT_DURATION_LONG  int64 = 604800
 	JWT_DURATION_SHORT int64 = 3600
 	JWT_DURATION_NEVER int64 = -1
 
-	REQUEST_SOURCE_APPENGINE_APP_APPNAME string = "name-of-app"
-	REQUEST_SOURCE_APPENGINE_TASK        string = "appengine-task"
-
-	JWT_COOKIE_NAME     string = "jicloud_jwt"
-	JWT_COOKIE_SID_NAME string = "jicloud_jwt-sid"
-	JWT_HEADER_SID_NAME string = "X-JICLOUD-SID"
+	REQUEST_SOURCE_APPENGINE_TASK string = "appengine-task"
 
 	JWT_AUDIENCE_COOKIE string = "cookie" //will vet cookie / header, does not necessarily vet against db
 	JWT_AUDIENCE_APP    string = "app"    //for app usual usage, does not necessarily vet against db
@@ -43,12 +37,7 @@ const (
 
 const (
 	_ = iota
-	APP_ID_JI_CALENDAR
-)
-
-const (
-	_ = iota
-	SYSTEM_ID_JI_OAUTH
+	SYSTEM_ID_OAUTH
 )
 
 func ValidateUserType(rData *pages.RequestData, jwtRecord *datastore.JwtRecord) (bool, interface{}) {
@@ -61,11 +50,6 @@ func ValidateUserType(rData *pages.RequestData, jwtRecord *datastore.JwtRecord) 
 			if err := datastore.LoadFromKey(rData.Ctx, &userRecord, jwtRecord.GetData().UserId); err == nil {
 
 				return true, &userRecord
-			}
-		} else if jwtRecord.GetData().UserType == JWT_USERTYPE_APP_ID {
-
-			if jwtRecord.GetData().UserId == APP_ID_JI_CALENDAR {
-				return true, "ji-calendar"
 			}
 		} else if jwtRecord.GetData().UserType == JWT_USERTYPE_SYSTEM_ID {
 			if jwtRecord.GetData().UserId > 0 {
@@ -122,9 +106,8 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 		}
 	}
 
-	if rData.PageConfig.RequestSource == REQUEST_SOURCE_APPENGINE_APP_APPNAME {
-		if rData.HttpRequest.Header.Get("X-Appengine-Inbound-Appid") != REQUEST_SOURCE_APPENGINE_APP_APPNAME {
-
+	if rData.PageConfig.RequestSource == rData.SiteConfig.REQUEST_SOURCE_APPENGINE_APPID {
+		if rData.HttpRequest.Header.Get("X-Appengine-Inbound-Appid") != rData.SiteConfig.REQUEST_SOURCE_APPENGINE_APPID {
 			goto fail
 		}
 	}
@@ -180,7 +163,7 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 			goto fail
 		}
 
-		if rData.PageConfig.SkipCsrfCheck != true && rData.JwtRecord.GetData().Audience == JWT_AUDIENCE_COOKIE && (rData.JwtRecord.GetData().SessionId == "" || rData.HttpRequest.Header.Get(JWT_HEADER_SID_NAME) == "" || rData.JwtRecord.GetData().SessionId != rData.HttpRequest.Header.Get(JWT_HEADER_SID_NAME)) {
+		if rData.PageConfig.SkipCsrfCheck != true && rData.JwtRecord.GetData().Audience == JWT_AUDIENCE_COOKIE && (rData.JwtRecord.GetData().SessionId == "" || rData.HttpRequest.Header.Get(rData.SiteConfig.JWT_HEADER_SID_NAME) == "" || rData.JwtRecord.GetData().SessionId != rData.HttpRequest.Header.Get(rData.SiteConfig.JWT_HEADER_SID_NAME)) {
 			//when jwt is from web view, it must validate against the session id set in the *header*, to prevent against csrf attacks
 			//exception is if scope is only PAGE_READ
 
@@ -253,15 +236,15 @@ func SignJwt(ctx context.Context, jwtRecord *datastore.JwtRecord) (string, error
 
 func SetJWTCookie(rData *pages.RequestData, jwtString string, sid string, duration int) {
 	if rData.HttpWriter != nil {
-		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: JWT_COOKIE_NAME, Value: jwtString, MaxAge: duration, HttpOnly: true, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
-		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: JWT_COOKIE_SID_NAME, Value: sid, MaxAge: duration, HttpOnly: false, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
+		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: rData.SiteConfig.JWT_COOKIE_NAME, Value: jwtString, MaxAge: duration, HttpOnly: true, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
+		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: rData.SiteConfig.JWT_COOKIE_SID_NAME, Value: sid, MaxAge: duration, HttpOnly: false, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
 	}
 }
 func UnsetJWTCookie(rData *pages.RequestData) {
 	if rData.HttpWriter != nil {
 
-		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: JWT_COOKIE_NAME, Value: "", MaxAge: -1, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
-		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: JWT_COOKIE_SID_NAME, Value: "", MaxAge: -1, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
+		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: rData.SiteConfig.JWT_COOKIE_NAME, Value: "", MaxAge: -1, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
+		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: rData.SiteConfig.JWT_COOKIE_SID_NAME, Value: "", MaxAge: -1, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
 	}
 
 }
@@ -360,7 +343,7 @@ func getJwtStringFromRequest(rData *pages.RequestData) string {
 	}
 
 	if jwtString == "" {
-		if jwtCookie, err := rData.HttpRequest.Cookie(JWT_COOKIE_NAME); err == nil {
+		if jwtCookie, err := rData.HttpRequest.Cookie(rData.SiteConfig.JWT_COOKIE_NAME); err == nil {
 			jwtString = jwtCookie.Value
 		}
 	}

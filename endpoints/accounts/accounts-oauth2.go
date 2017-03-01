@@ -127,7 +127,7 @@ func OauthRequest(rData *pages.RequestData) {
 		return
 	}
 
-	_, stateJwtString, err := auth.GetNewSystemsOobJWT(rData, auth.SYSTEM_ID_JI_OAUTH, jwt_scopes.OAUTH_STATE, string(stateBytes))
+	_, stateJwtString, err := auth.GetNewSystemsOobJWT(rData, auth.SYSTEM_ID_OAUTH, jwt_scopes.OAUTH_STATE, string(stateBytes))
 	if err != nil {
 		rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
 		return

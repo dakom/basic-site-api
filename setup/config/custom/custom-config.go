@@ -38,4 +38,9 @@ type Config struct {
 	API_HOSTNAME          string
 	COOKIE_SECURE         bool
 	COOKIE_DOMAIN         string
+
+	JWT_COOKIE_NAME                string
+	JWT_COOKIE_SID_NAME            string
+	JWT_HEADER_SID_NAME            string
+	REQUEST_SOURCE_APPENGINE_APPID string
 }
