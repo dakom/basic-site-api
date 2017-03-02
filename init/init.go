@@ -1,4 +1,4 @@
-package setup
+package init
 
 import (
 	"net/http"
@@ -53,10 +53,15 @@ func gotPageRequest(w http.ResponseWriter, r *http.Request, pageConfigs map[stri
 	//CORS
 	//For now, we are not supporting preflight, rather the restriction is placed browser side
 	//see http://stackoverflow.com/questions/39725955/why-is-there-no-preflight-in-cors-for-post-requests-with-standard-content-type
-	switch originHeader := r.Header.Get("Origin"); originHeader {
-	case "http://localhost:3000", "https://localhost:3000", "http://app.examplecom/", "https://app.example.com/":
-		rData.HttpWriter.Header().Add("Access-Control-Allow-Origin", originHeader)
+	origin := r.Header.Get("Origin")
 
+	rData.LogInfo("ORIGIN: %s", origin)
+
+	for _, allowedOrigin := range siteConfig.CORS_ALLOWED_ORIGINS {
+		if origin == allowedOrigin {
+			rData.HttpWriter.Header().Add("Access-Control-Allow-Origin", origin)
+			break
+		}
 	}
 
 	if rData.PageConfig, ok = pageConfigs[pageName]; !ok {

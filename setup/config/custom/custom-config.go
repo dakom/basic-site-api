@@ -22,6 +22,7 @@ type Config struct {
 	MAX_READ_SIZE int64
 
 	OAUTH_ALLOWED_SCHEMAS []string
+	CORS_ALLOWED_ORIGINS  []string
 
 	//https://developers.google.com/identity/protocols/OAuth2InstalledApp#choosingredirecturi
 	OAUTH_GOOGLE_CLIENTID       string

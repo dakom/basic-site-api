@@ -117,7 +117,9 @@ func OauthRequest(rData *pages.RequestData) {
 	}
 
 	if !slice.StringInSlice(state.Destination, OAUTH_ALLOWED_DESTINATIONS) || !slice.StringInSlice(state.Schema, rData.SiteConfig.OAUTH_ALLOWED_SCHEMAS) || !slice.StringInSlice(state.Provider, OAUTH_ALLOWED_PROVIDERS) || !slice.StringInSlice(state.Request, OAUTH_ALLOWED_REQUESTS) {
-		rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
+		rData.LogInfo("%v", rData.SiteConfig.OAUTH_ALLOWED_SCHEMAS)
+		rData.SetJsonErrorCodeResponse(state.Schema)
+		//rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
 		return
 	}
 
