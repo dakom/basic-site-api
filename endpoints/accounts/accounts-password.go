@@ -4,14 +4,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
-	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 	"github.com/dakom/basic-site-api/lib/auth"
 	"github.com/dakom/basic-site-api/lib/auth/jwt_scopes"
 	"github.com/dakom/basic-site-api/lib/datastore"
 	"github.com/dakom/basic-site-api/lib/email"
 	"github.com/dakom/basic-site-api/lib/pages"
 	"github.com/dakom/basic-site-api/lib/utils/cipher"
+	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
+	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 )
 
 func GotChangePasswordTokenRequestBySession(rData *pages.RequestData) {
@@ -38,11 +38,11 @@ func ForgotPasswordByUsername(rData *pages.RequestData) {
 
 	if !userRecord.GetData().IsActive {
 		rData.SetJsonErrorCodeWithDataResponse(statuscodes.NOT_ACTIVATED, map[string]interface{}{
-			"uid":   rData.UserRecord.GetKeyIntAsString(),
-			"email": rData.UserRecord.GetData().Email,
-			"fname": rData.UserRecord.GetData().FirstName,
-			"lname": rData.UserRecord.GetData().LastName,
-			"avid":  strconv.FormatInt(rData.UserRecord.GetData().AvatarId, 10),
+			"uid":   userRecord.GetKeyIntAsString(),
+			"email": userRecord.GetData().Email,
+			"fname": userRecord.GetData().FirstName,
+			"lname": userRecord.GetData().LastName,
+			"avid":  strconv.FormatInt(userRecord.GetData().AvatarId, 10),
 		})
 
 		return

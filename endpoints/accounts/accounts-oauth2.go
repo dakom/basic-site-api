@@ -60,7 +60,7 @@ type StateInfo struct {
 	Destination string `json:"dest"`
 	Request     string `json:"request"`
 	RequestMeta string `json:"requestMeta,omitempty" datastore:",noindex"`
-	Schema      string `json:"schema"`
+	Scheme      string `json:"scheme"`
 	Provider    string `json:"provider"`
 	Response    string `json:"response,omitempty" datastore:",noindex"`
 }
@@ -75,11 +75,11 @@ func (s *StateInfo) ResponseUrl(hostname string) string {
 }
 
 func (s *StateInfo) DestinationUrl(stateJwtString string) string {
-	return s.Schema + s.Destination + "/" + stateJwtString
+	return s.Scheme + s.Destination + "/" + stateJwtString
 }
 
 func (s *StateInfo) ErrorUrl(statusCode string) string {
-	return s.Schema + "status/" + statusCode
+	return s.Scheme + "status/" + statusCode
 }
 
 type UserInfo struct {
@@ -110,16 +110,14 @@ func OauthRequest(rData *pages.RequestData) {
 
 	state := StateInfo{
 		Destination: rData.HttpRequest.FormValue("dest"),
-		Schema:      rData.HttpRequest.FormValue("schema"),
+		Scheme:      rData.HttpRequest.FormValue("scheme"),
 		Provider:    rData.HttpRequest.FormValue("provider"),
 		Request:     rData.HttpRequest.FormValue("request"),
 		RequestMeta: rData.HttpRequest.FormValue("meta"),
 	}
 
-	if !slice.StringInSlice(state.Destination, OAUTH_ALLOWED_DESTINATIONS) || !slice.StringInSlice(state.Schema, rData.SiteConfig.OAUTH_ALLOWED_SCHEMAS) || !slice.StringInSlice(state.Provider, OAUTH_ALLOWED_PROVIDERS) || !slice.StringInSlice(state.Request, OAUTH_ALLOWED_REQUESTS) {
-		rData.LogInfo("%v", rData.SiteConfig.OAUTH_ALLOWED_SCHEMAS)
-		rData.SetJsonErrorCodeResponse(state.Schema)
-		//rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
+	if !slice.StringInSlice(state.Destination, OAUTH_ALLOWED_DESTINATIONS) || !slice.StringInSlice(state.Scheme, rData.SiteConfig.OAUTH_ALLOWED_SCHEMES) || !slice.StringInSlice(state.Provider, OAUTH_ALLOWED_PROVIDERS) || !slice.StringInSlice(state.Request, OAUTH_ALLOWED_REQUESTS) {
+		rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
 		return
 	}
 
@@ -185,9 +183,9 @@ func OauthResponse(rData *pages.RequestData) {
 		}
 	}
 
-	if state == nil || state.Schema == "" {
+	if state == nil || state.Scheme == "" {
 		state = &StateInfo{
-			Schema: rData.SiteConfig.OAUTH_ALLOWED_SCHEMAS[len(rData.SiteConfig.OAUTH_ALLOWED_SCHEMAS)-1],
+			Scheme: rData.SiteConfig.OAUTH_ALLOWED_SCHEMES[len(rData.SiteConfig.OAUTH_ALLOWED_SCHEMES)-1],
 		}
 	}
 
