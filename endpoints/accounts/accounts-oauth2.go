@@ -70,6 +70,11 @@ type RegisterRequestMeta struct {
 	Newsletter bool `json:"newsletter"`
 }
 
+type LoginRequestMeta struct {
+	ServerPort string `json:"port"`
+	AppName string `json:"app"`
+}
+
 func (s *StateInfo) ResponseUrl(hostname string) string {
 	return hostname + pagenames.INTERNAL_OAUTH_RESPONSE + "/"
 }
@@ -183,6 +188,8 @@ func OauthResponse(rData *pages.RequestData) {
 		}
 	}
 
+
+
 	if state == nil || state.Scheme == "" {
 		state = &StateInfo{
 			Scheme: rData.SiteConfig.OAUTH_ALLOWED_SCHEMES[len(rData.SiteConfig.OAUTH_ALLOWED_SCHEMES)-1],
@@ -228,7 +235,19 @@ func OauthAction(rData *pages.RequestData) {
 				}
 				return
 			}
-			rData.SetJsonSuccessResponse(map[string]interface{}{"jwt": jwtString})
+
+			response := map[string]interface{}{"jwt": jwtString}
+
+			var requestMeta LoginRequestMeta
+			if(state.RequestMeta != "") {
+				if err := json.Unmarshal([]byte(state.RequestMeta), &requestMeta); err != nil {
+					rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
+					return
+				}
+				response["meta"] = requestMeta
+			}
+
+			rData.SetJsonSuccessResponse(response)
 			return
 		} else if actionType == "register" {
 			var requestMeta RegisterRequestMeta
