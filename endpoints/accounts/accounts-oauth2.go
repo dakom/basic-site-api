@@ -71,16 +71,43 @@ type RegisterRequestMeta struct {
 }
 
 type LoginRequestMeta struct {
-	ServerPort string `json:"port"`
-	AppName string `json:"app"`
+	AppId string `json:"appId"`
+	AppName string `json:"appName"`
+	AppScheme string `json:"appScheme"`
+	AppPort string `json:"appPort"`
 }
 
 func (s *StateInfo) ResponseUrl(hostname string) string {
 	return hostname + pagenames.INTERNAL_OAUTH_RESPONSE + "/"
 }
 
-func (s *StateInfo) DestinationUrl(stateJwtString string) string {
-	return s.Scheme + s.Destination + "/" + stateJwtString
+func (s *StateInfo) DestinationUrl(rData *pages.RequestData, jwtRecord *datastore.JwtRecord) (string, error) {
+
+	//take the jwt, strip the extra stuff, and resign (gets around long uri limit)
+	jwtData := jwtRecord.GetData()
+
+	var newRecord datastore.JwtRecord
+
+	newRecord.SetData(&datastore.JwtData{
+		SelfId: jwtData.SelfId,
+		Audience:     jwtData.Audience,
+		UserId:       jwtData.UserId,
+		UserType:     jwtData.UserType,
+		ExpiresAt:    jwtData.ExpiresAt,
+		IssuedAt:     jwtData.IssuedAt,
+		Scopes:       jwtData.Scopes,
+		SessionId:    jwtData.SessionId,
+		FinalExpires: jwtData.FinalExpires,
+		Subject:      jwtData.Subject,
+		//ommitting: Extra        string `json:"extra,omitempty" datastore:",noindex"`
+	})
+
+	newJwtString, err := auth.SignJwt(rData.Ctx, &newRecord)
+	if(err != nil) {
+		return "", err
+	}
+
+	return s.Scheme + s.Destination + "/" + newJwtString, nil
 }
 
 func (s *StateInfo) ErrorUrl(statusCode string) string {
@@ -156,8 +183,6 @@ func OauthRequest(rData *pages.RequestData) {
 
 func OauthResponse(rData *pages.RequestData) {
 
-	//var stateJwtRecord datastore.JwtRecord
-
 	stateJwtString := rData.HttpRequest.FormValue("state")
 	code := rData.HttpRequest.FormValue("code")
 
@@ -180,9 +205,16 @@ func OauthResponse(rData *pages.RequestData) {
 			if stateBytes, err := json.Marshal(state); err == nil {
 				stateJwtRecord.GetData().Extra = string(stateBytes)
 				if err := datastore.Save(rData.Ctx, stateJwtRecord); err == nil {
-					//SUCCESS!
-					rData.HttpRedirectDestination = state.DestinationUrl(stateJwtString)
-					return
+
+					dst, err := state.DestinationUrl(rData, stateJwtRecord)
+
+					if(err == nil) {
+						//SUCCESS!
+						rData.HttpRedirectDestination = dst
+						return
+					}
+
+
 				}
 			}
 		}
