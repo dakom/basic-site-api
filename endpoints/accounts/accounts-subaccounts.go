@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 	"github.com/dakom/basic-site-api/lib/datastore"
 	"github.com/dakom/basic-site-api/lib/pages"
+	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 )
 
 type SubaccountInfo struct {
@@ -46,7 +46,7 @@ func SubaccountsList(rData *pages.RequestData) {
 		}
 	}
 
-	rData.SetJsonSuccessResponse(map[string]interface{}{
+	rData.SetJsonSuccessResponse(pages.JsonMapGeneric{
 		"list": infoList,
 	})
 }

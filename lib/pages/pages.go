@@ -2,6 +2,7 @@ package pages
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -10,7 +11,6 @@ import (
 	"strconv"
 
 	"github.com/dakom/basic-site-api/lib/datastore"
-	"github.com/dakom/basic-site-api/lib/utils/text"
 	"github.com/dakom/basic-site-api/setup/config/custom"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/log"
@@ -34,7 +34,7 @@ type RequestData struct {
 	UserRecord                *datastore.UserRecord
 	HttpWriter                http.ResponseWriter
 	HttpRequest               *http.Request
-	JsonResponse              map[string]interface{}
+	JsonResponse              JsonResponse
 	HttpStatusResponseMessage string
 	HttpStatusResponseCode    int
 	HttpRedirectDestination   string
@@ -44,6 +44,30 @@ type RequestData struct {
 	JwtRecord                 *datastore.JwtRecord
 	JwtString                 string
 	DeleteJwtWhenFinished     bool
+}
+
+type JsonResponse interface {
+	GetString() (string, error)
+	SetJwt(string)
+	SetErrorCode(string)
+}
+
+type JsonMapGeneric map[string]interface{}
+
+func (j JsonMapGeneric) GetString() (string, error) {
+	jBytes, err := json.Marshal(j)
+	if err != nil {
+		return "", err
+	}
+
+	return string(jBytes), nil
+}
+
+func (j JsonMapGeneric) SetJwt(jwt string) {
+	j["jwt"] = jwt
+}
+func (j JsonMapGeneric) SetErrorCode(code string) {
+	j["code"] = code
 }
 
 type TemplateData struct {
@@ -75,11 +99,11 @@ func (rData *RequestData) SetContentType(contentType string) {
 	rData.HttpWriter.Header().Set("Content-Type", contentType)
 }
 
-func (rData *RequestData) SetJsonSuccessResponse(jsonMap map[string]interface{}) {
-	setJsonCodeResponse(rData, 200, jsonMap, "")
+func (rData *RequestData) SetJsonSuccessResponse(jsonResponse JsonResponse) {
+	setJsonCodeResponse(rData, 200, jsonResponse, "")
 }
-func (rData *RequestData) SetJsonErrorResponse(jsonMap map[string]interface{}) {
-	setJsonCodeResponse(rData, 400, jsonMap, "")
+func (rData *RequestData) SetJsonErrorResponse(jsonResponse JsonResponse) {
+	setJsonCodeResponse(rData, 400, jsonResponse, "")
 }
 
 func (rData *RequestData) SetJsonSuccessCodeResponse(code string) {
@@ -90,41 +114,35 @@ func (rData *RequestData) SetJsonErrorCodeResponse(code string) {
 	setJsonCodeResponse(rData, 400, nil, code)
 }
 
-func (rData *RequestData) SetJsonSuccessCodeWithDataResponse(code string, jsonMap map[string]interface{}) {
-	setJsonCodeResponse(rData, 200, jsonMap, code)
+func (rData *RequestData) SetJsonSuccessCodeWithDataResponse(code string, jsonResponse JsonResponse) {
+	setJsonCodeResponse(rData, 200, jsonResponse, code)
 }
 
-func (rData *RequestData) SetJsonErrorCodeWithDataResponse(code string, jsonMap map[string]interface{}) {
-	setJsonCodeResponse(rData, 400, jsonMap, code)
+func (rData *RequestData) SetJsonErrorCodeWithDataResponse(code string, jsonResponse JsonResponse) {
+	setJsonCodeResponse(rData, 400, jsonResponse, code)
 }
 
-func setJsonCodeResponse(rData *RequestData, httpStatus int, jsonMap map[string]interface{}, errorCode string) {
+func setJsonCodeResponse(rData *RequestData, httpStatus int, jsonResponse JsonResponse, errorCode string) {
 	if httpStatus != -1 {
 		rData.HttpStatusResponseCode = httpStatus
 	}
-	if jsonMap == nil {
-		jsonMap = make(map[string]interface{})
+	if jsonResponse == nil {
+		jsonResponse = make(JsonMapGeneric)
 	}
 
 	if errorCode != "" {
-		jsonMap["code"] = errorCode
+		jsonResponse.SetErrorCode(errorCode)
 	}
 
-	rData.JsonResponse = jsonMap
-}
-
-func (rData *RequestData) MixinJsonResponse(key string, val interface{}) {
-	if rData.JsonResponse == nil {
-		rData.JsonResponse = make(map[string]interface{})
-	}
-	rData.JsonResponse[key] = val
+	rData.JsonResponse = jsonResponse
 }
 
 func (rData *RequestData) OutputJsonString() error {
 	var err error
+
 	rData.SetContentType("application/json; charset=utf-8")
 
-	rData.HttpStatusResponseMessage, err = text.MakeJsonString(rData.JsonResponse)
+	rData.HttpStatusResponseMessage, err = rData.JsonResponse.GetString()
 	if err != nil {
 		rData.HttpStatusResponseCode = 400
 	}

@@ -71,10 +71,10 @@ type RegisterRequestMeta struct {
 }
 
 type LoginRequestMeta struct {
-	AppId string `json:"appId"`
-	AppName string `json:"appName"`
+	AppId     string `json:"appId"`
+	AppName   string `json:"appName"`
 	AppScheme string `json:"appScheme"`
-	AppPort string `json:"appPort"`
+	AppPort   string `json:"appPort"`
 }
 
 func (s *StateInfo) ResponseUrl(hostname string) string {
@@ -89,7 +89,7 @@ func (s *StateInfo) DestinationUrl(rData *pages.RequestData, jwtRecord *datastor
 	var newRecord datastore.JwtRecord
 
 	newRecord.SetData(&datastore.JwtData{
-		SelfId: jwtData.SelfId,
+		SelfId:       jwtData.SelfId,
 		Audience:     jwtData.Audience,
 		UserId:       jwtData.UserId,
 		UserType:     jwtData.UserType,
@@ -103,7 +103,7 @@ func (s *StateInfo) DestinationUrl(rData *pages.RequestData, jwtRecord *datastor
 	})
 
 	newJwtString, err := auth.SignJwt(rData.Ctx, &newRecord)
-	if(err != nil) {
+	if err != nil {
 		return "", err
 	}
 
@@ -176,7 +176,7 @@ func OauthRequest(rData *pages.RequestData) {
 	authUrlFormatted := fmt.Sprintf("%s", authUrl)
 	rData.LogInfo(authUrlFormatted)
 
-	rData.SetJsonSuccessResponse(map[string]interface{}{
+	rData.SetJsonSuccessResponse(pages.JsonMapGeneric{
 		"url": authUrlFormatted,
 	})
 }
@@ -208,19 +208,16 @@ func OauthResponse(rData *pages.RequestData) {
 
 					dst, err := state.DestinationUrl(rData, stateJwtRecord)
 
-					if(err == nil) {
+					if err == nil {
 						//SUCCESS!
 						rData.HttpRedirectDestination = dst
 						return
 					}
 
-
 				}
 			}
 		}
 	}
-
-
 
 	if state == nil || state.Scheme == "" {
 		state = &StateInfo{
@@ -257,7 +254,7 @@ func OauthAction(rData *pages.RequestData) {
 				if userRecord == nil {
 					rData.SetJsonErrorCodeResponse(err.Error()) //nousername
 				} else {
-					rData.SetJsonErrorCodeWithDataResponse(err.Error(), map[string]interface{}{
+					rData.SetJsonErrorCodeWithDataResponse(err.Error(), pages.JsonMapGeneric{
 						"uid":   userRecord.GetKeyIntAsString(),
 						"email": userRecord.GetData().Email,
 						"fname": userRecord.GetData().FirstName,
@@ -268,10 +265,10 @@ func OauthAction(rData *pages.RequestData) {
 				return
 			}
 
-			response := map[string]interface{}{"jwt": jwtString}
+			response := pages.JsonMapGeneric{"jwt": jwtString}
 
 			var requestMeta LoginRequestMeta
-			if(state.RequestMeta != "") {
+			if state.RequestMeta != "" {
 				if err := json.Unmarshal([]byte(state.RequestMeta), &requestMeta); err != nil {
 					rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
 					return
@@ -325,7 +322,7 @@ func OauthAction(rData *pages.RequestData) {
 
 			//not this because it will destroy cookie-based login token too! rData.DeleteJwtWhenFinished = true
 			auth.DestroyToken(rData)
-			rData.SetJsonSuccessResponse(map[string]interface{}{
+			rData.SetJsonSuccessResponse(pages.JsonMapGeneric{
 				"jwt": jwtString,
 			})
 

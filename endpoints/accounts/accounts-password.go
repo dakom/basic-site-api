@@ -37,7 +37,7 @@ func ForgotPasswordByUsername(rData *pages.RequestData) {
 	}
 
 	if !userRecord.GetData().IsActive {
-		rData.SetJsonErrorCodeWithDataResponse(statuscodes.NOT_ACTIVATED, map[string]interface{}{
+		rData.SetJsonErrorCodeWithDataResponse(statuscodes.NOT_ACTIVATED, pages.JsonMapGeneric{
 			"uid":   userRecord.GetKeyIntAsString(),
 			"email": userRecord.GetData().Email,
 			"fname": userRecord.GetData().FirstName,

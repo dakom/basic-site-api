@@ -161,7 +161,10 @@ func gotPageRequest(w http.ResponseWriter, r *http.Request, pageConfigs map[stri
 	} else if rData.PageConfig.HandlerType == pages.HANDLER_TYPE_JSON {
 		//json must mix in after processing
 		if jwtWasRefreshed {
-			rData.MixinJsonResponse("jwt", rData.JwtString)
+			if rData.JsonResponse == nil {
+				rData.JsonResponse = make(pages.JsonMapGeneric)
+			}
+			rData.JsonResponse.SetJwt(rData.JwtString)
 		}
 		rData.OutputJsonString()
 	} else if rData.PageConfig.HandlerType == pages.HANDLER_TYPE_HTTP_REDIRECT {

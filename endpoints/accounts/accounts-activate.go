@@ -5,13 +5,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
-	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 	"github.com/dakom/basic-site-api/lib/auth"
 	"github.com/dakom/basic-site-api/lib/auth/jwt_scopes"
 	"github.com/dakom/basic-site-api/lib/datastore"
 	"github.com/dakom/basic-site-api/lib/email"
 	"github.com/dakom/basic-site-api/lib/pages"
+	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
+	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/taskqueue"
 )

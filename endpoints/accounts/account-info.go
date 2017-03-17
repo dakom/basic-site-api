@@ -10,7 +10,7 @@ import (
 )
 
 func GotSettingsInfoServiceRequest(rData *pages.RequestData) {
-	rData.SetJsonSuccessResponse(map[string]interface{}{
+	rData.SetJsonSuccessResponse(pages.JsonMapGeneric{
 		"uid":   rData.UserRecord.GetKeyIntAsString(),
 		"email": rData.UserRecord.GetData().Email,
 		"fname": rData.UserRecord.GetData().FirstName,

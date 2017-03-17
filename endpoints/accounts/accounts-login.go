@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 	"github.com/dakom/basic-site-api/lib/auth"
 	"github.com/dakom/basic-site-api/lib/datastore"
 	"github.com/dakom/basic-site-api/lib/pages"
 	"github.com/dakom/basic-site-api/lib/utils/cipher"
+	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 )
 
 func GotLoginServiceRequest(rData *pages.RequestData) {
@@ -27,7 +27,7 @@ func GotLoginServiceRequest(rData *pages.RequestData) {
 
 			rData.SetJsonErrorCodeResponse(err.Error()) //nousername
 		} else {
-			rData.SetJsonErrorCodeWithDataResponse(err.Error(), map[string]interface{}{
+			rData.SetJsonErrorCodeWithDataResponse(err.Error(), pages.JsonMapGeneric{
 				"uid":   userRecord.GetKeyIntAsString(),
 				"email": userRecord.GetData().Email,
 				"fname": userRecord.GetData().FirstName,
@@ -39,7 +39,7 @@ func GotLoginServiceRequest(rData *pages.RequestData) {
 		return
 	}
 
-	rData.SetJsonSuccessResponse(map[string]interface{}{"jwt": jwtString})
+	rData.SetJsonSuccessResponse(pages.JsonMapGeneric{"jwt": jwtString})
 }
 
 func DoLogin(rData *pages.RequestData, username string, password string, audience string, lookupType int64) (*datastore.UserRecord, *datastore.JwtRecord, string, error) {
