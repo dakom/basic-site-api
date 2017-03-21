@@ -17,6 +17,30 @@ const (
 	LOOKUP_TYPE_OAUTH
 )
 
+func GetFullNameShortened(userData *datastore.UserData) string {
+	name := userData.FirstName
+
+	if userData.LastName == "" {
+		return name
+	}
+	if name != "" {
+		name += " "
+	}
+
+	name += userData.LastName[:1] + "."
+
+	return name
+}
+
+func GetPrimaryUsername(userData *datastore.UserData) string {
+	namesLength := len(userData.UsernameHistory)
+	if namesLength == 0 {
+		return ""
+	}
+
+	return userData.UsernameHistory[namesLength-1]
+}
+
 func GetUsernamesFromKey(c context.Context, userKey *gaeds.Key) ([]string, error) {
 	var lookupDatas []datastore.UsernameLookupData
 	var usernames []string

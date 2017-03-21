@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
@@ -256,4 +258,19 @@ func Pkcs7Unpad(data []byte, blocklen int) ([]byte, error) {
 	}
 
 	return data[:len(data)-padlen], nil
+}
+
+func CreateHmac(message []byte, key []byte) []byte {
+	mac := hmac.New(sha256.New, key)
+	mac.Write(message)
+
+	return mac.Sum(nil)
+}
+
+func ValidateHmac(sig []byte, message []byte, key []byte) bool {
+
+	mac := hmac.New(sha256.New, key)
+	mac.Write(message)
+	expectedMAC := mac.Sum(nil)
+	return hmac.Equal(sig, expectedMAC)
 }

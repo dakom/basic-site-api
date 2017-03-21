@@ -1,7 +1,6 @@
 package datastore
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -11,7 +10,6 @@ import (
 
 	"golang.org/x/net/context"
 	gaeds "google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/log"
 )
 
 //Generic Interface (covers all specific record types)
@@ -49,7 +47,7 @@ func SetKey(c context.Context, dsi DsInterface, keyVal interface{}) {
 }
 
 func SetAncestorKey(c context.Context, dsi DsInterface, keyVal interface{}, ancestorKeyVal interface{}) {
-	dsi.SetKey(getKeyFromVal(c, dsi.GetType(), keyVal, ancestorKeyVal))
+	dsi.SetKey(GetKeyFromVal(c, dsi.GetType(), keyVal, ancestorKeyVal))
 }
 
 func LoadFromKey(c context.Context, dsi DsInterface, keyVal interface{}) error {
@@ -139,115 +137,39 @@ func Delete(c context.Context, dsi DsInterface) error {
 	return gaeds.Delete(c, dsi.GetKey())
 }
 
-func GetMultiKeys(c context.Context, kind string, keyVals []interface{}, ancestorKeyVals []interface{}) []*gaeds.Key {
+func CheckMultiGetResults(multiError error) ([]int, error) {
+	var failedIndexes []int
+
+	if me, ok := multiError.(appengine.MultiError); ok {
+		for idx, merr := range me {
+			//if merr is nil, the index did not contain an error
+			if merr != nil {
+				failedIndexes = append(failedIndexes, idx)
+			}
+		}
+	} else if me != nil {
+		return nil, me
+	}
+
+	return nil, nil
+}
+
+func GetMultiKeysFromInts(c context.Context, kind string, keyVals []int64, commonAncestorKey interface{}) []*gaeds.Key {
 	keys := make([]*gaeds.Key, len(keyVals))
 
 	for idx, keyVal := range keyVals {
-		var ancestorKeyVal interface{}
-		if ancestorKeyVals != nil {
-			if idx < len(ancestorKeyVals) {
-				ancestorKeyVal = ancestorKeyVals[idx]
-			}
-		}
-		keys[idx] = getKeyFromVal(c, kind, keyVal, ancestorKeyVal)
+		keys[idx] = GetKeyFromVal(c, kind, keyVal, commonAncestorKey)
 	}
 
 	return keys
 }
 
-func GetMultiKeysInt(c context.Context, kind string, keyVals []int64, ancestorKeyVals []int64) []*gaeds.Key {
-	keys := make([]*gaeds.Key, len(keyVals))
-
-	for idx, keyVal := range keyVals {
-		var ancestorKeyVal interface{}
-		if ancestorKeyVals != nil {
-			if idx < len(ancestorKeyVals) {
-				ancestorKeyVal = ancestorKeyVals[idx]
-			}
-		}
-		keys[idx] = getKeyFromVal(c, kind, keyVal, ancestorKeyVal)
-	}
-
-	return keys
-}
-
-func GetMultiDataSimpleInt(c context.Context, kind string, keyVals []int64) ([]interface{}, error) {
-	return GetMultiDataInt(c, kind, keyVals, nil, true)
-}
-
-func GetMultiDataSameAncestorInt(c context.Context, kind string, keyVals []int64, ancestorKeyVal int64, checkLength bool) ([]interface{}, error) {
-	keyLen := len(keyVals)
-
-	ancestorKeyList := make([]int64, keyLen)
-
-	for i := 0; i < keyLen; i++ {
-		ancestorKeyList[i] = ancestorKeyVal
-	}
-
-	return GetMultiDataInt(c, kind, keyVals, ancestorKeyList, checkLength)
-}
-
-func GetMultiDataInt(c context.Context, kind string, keyVals []int64, ancestorKeyVals []int64, checkLength bool) ([]interface{}, error) {
-	keys := GetMultiKeysInt(c, kind, keyVals, ancestorKeyVals)
-
-	var tempDatas interface{}
-	var targetRecords []interface{}
-	var err error
-
-	if kind == USER_TYPE {
-		tempDatas = make([]*UserData, len(keys))
-	}
-
-	multiError := gaeds.GetMulti(c, keys, tempDatas)
-
-	validKeys := make([]bool, len(keys))
-	for idx, _ := range validKeys {
-		validKeys[idx] = true
-	}
-
-	if multiError != nil {
-		if me, ok := multiError.(appengine.MultiError); ok {
-			for idx, merr := range me {
-				if merr != nil {
-					validKeys[idx] = false
-				} else {
-
-					log.Errorf(c, "Errorin getMulti for ID %v: %v", keys[idx].IntID(), merr)
-				}
-			}
-		}
-	}
-
-	for idx, isValid := range validKeys {
-		if isValid {
-			if kind == USER_TYPE {
-				targetRecord := UserRecord{
-					DsRecord: DsRecord{
-						Key: keys[idx],
-					},
-				}
-				targetRecord.SetData(tempDatas.([]*UserData)[idx])
-				targetRecords = append(targetRecords, &targetRecord)
-			}
-
-		}
-	}
-
-	if checkLength == true {
-		if len(targetRecords) != len(keys) {
-			err = errors.New(statuscodes.RECORD_LENGTH_MISMATCH)
-		}
-	}
-
-	return targetRecords, err
-}
-
-func getKeyFromVal(c context.Context, kind string, keyVal interface{}, ancestorKeyVal interface{}) *gaeds.Key {
+func GetKeyFromVal(c context.Context, kind string, keyVal interface{}, ancestorKeyVal interface{}) *gaeds.Key {
 	if keyVal == nil {
 		return nil
 	}
 
-	ancestorKey := getKeyFromVal(c, kind, ancestorKeyVal, nil)
+	ancestorKey := GetKeyFromVal(c, kind, ancestorKeyVal, nil)
 
 	switch keyVal := keyVal.(type) {
 	case *gaeds.Key:

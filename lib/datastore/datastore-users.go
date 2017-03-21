@@ -86,6 +86,21 @@ func (dsr *UserRecord) GetFullName() string {
 	return name
 }
 
+func (dsr *UserRecord) GetFullNameShortened() string {
+	name := dsr.GetData().FirstName
+
+	if dsr.GetData().LastName == "" {
+		return name
+	}
+	if name != "" {
+		name += " "
+	}
+
+	name += dsr.GetData().LastName[:1] + "."
+
+	return name
+}
+
 func (dsr *UserRecord) GetRemainingCredits() int64 {
 	var total int64
 	for _, userCredits := range dsr.GetData().Credits {

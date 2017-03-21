@@ -7,6 +7,7 @@ import (
 	"github.com/dakom/basic-site-api/lib/datastore"
 	"github.com/dakom/basic-site-api/lib/pages"
 	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
+	gaeds "google.golang.org/appengine/datastore"
 )
 
 type SubaccountInfo struct {
@@ -18,30 +19,31 @@ type SubaccountInfo struct {
 }
 
 func SubaccountsList(rData *pages.RequestData) {
-	userIdKeys := rData.UserRecord.GetData().SubAccountIds
+	userIdInts := rData.UserRecord.GetData().SubAccountIds
+	userIdKeys := datastore.GetMultiKeysFromInts(rData.Ctx, datastore.USER_TYPE, userIdInts, nil)
 
 	infoList := make([]SubaccountInfo, len(userIdKeys))
 
+	rData.LogInfo("Keys: %v", userIdInts)
+
 	if len(userIdKeys) > 0 {
 
-		genericRecords, err := datastore.GetMultiDataSimpleInt(rData.Ctx, datastore.USER_TYPE, userIdKeys)
-		if err != nil {
+		userDatas := make([]datastore.UserData, len(userIdKeys))
+
+		if multiError := gaeds.GetMulti(rData.Ctx, userIdKeys, userDatas); multiError != nil {
+			rData.LogError("%v", multiError)
 			rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
 			return
 		}
 
-		for idx, genericRecord := range genericRecords {
-			userRecord, ok := genericRecord.(*datastore.UserRecord)
-			if !ok {
-				rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
-				return
-			}
+		for idx, userData := range userDatas {
+
 			infoList[idx] = SubaccountInfo{
-				Id:        userRecord.GetKeyIntAsString(),
-				Username:  userRecord.GetData().UsernameHistory[0],
-				FirstName: userRecord.GetData().FirstName,
-				LastName:  userRecord.GetData().LastName,
-				AvatarId:  strconv.FormatInt(userRecord.GetData().AvatarId, 10),
+				Id:        strconv.FormatInt(userIdInts[idx], 10),
+				Username:  GetPrimaryUsername(&userData),
+				FirstName: userData.FirstName,
+				LastName:  userData.LastName,
+				AvatarId:  strconv.FormatInt(userData.AvatarId, 10),
 			}
 		}
 	}

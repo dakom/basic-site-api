@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
-	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 	"github.com/dakom/basic-site-api/lib/auth/auth_roles"
 	"github.com/dakom/basic-site-api/lib/datastore"
 	"github.com/dakom/basic-site-api/lib/pages"
 	"github.com/dakom/basic-site-api/lib/utils/cipher"
 	"github.com/dakom/basic-site-api/lib/utils/text"
+	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
+	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 	"golang.org/x/net/context"
 
 	gaeds "google.golang.org/appengine/datastore"
@@ -147,6 +147,11 @@ func DoRegister(rData *pages.RequestData, info *RegisterInfo) error {
 		userRecord.GetData().AddedDate = time.Now()
 		userRecord.GetData().Roles = auth_roles.USER
 
+		/*Conceptually subaccounts could have been created as actual children of master accounts
+		  However that would require knowing the parentid in conjunction with the username
+		  And/or storing it with the lookup record ... and across the pipeline.
+		  It didn't seem to add much value that way and this is easier
+		*/
 		if parentRecord != nil {
 			userRecord.GetData().ParentId = info.ParentId
 		}
