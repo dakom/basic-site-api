@@ -30,7 +30,6 @@ package accounts
 
 import (
 	"errors"
-	"strconv"
 
 	"github.com/dakom/basic-site-api/lib/auth/jwt_scopes"
 	"github.com/dakom/basic-site-api/lib/datastore"
@@ -66,8 +65,12 @@ type StateInfo struct {
 }
 
 type RegisterRequestMeta struct {
-	Terms      bool `json:"terms"`
-	Newsletter bool `json:"newsletter"`
+	Terms      bool   `json:"terms"`
+	Newsletter bool   `json:"newsletter"`
+	AppId      string `json:"appId"`
+	AppName    string `json:"appName"`
+	AppScheme  string `json:"appScheme"`
+	AppPort    string `json:"appPort"`
 }
 
 type LoginRequestMeta struct {
@@ -229,6 +232,7 @@ func OauthResponse(rData *pages.RequestData) {
 }
 
 func OauthAction(rData *pages.RequestData) {
+	response := pages.JsonMapGeneric{}
 
 	state, err := getStateFromJwtRecord(rData.JwtRecord)
 	if err != nil {
@@ -247,27 +251,8 @@ func OauthAction(rData *pages.RequestData) {
 		audience := auth.JWT_AUDIENCE_APP //for web environments, we might want to allow setting this to cookie...
 
 		if actionType == "login" {
-
-			userRecord, _, jwtString, err := DoLogin(rData, userInfo.Id, "", audience, LOOKUP_TYPE_OAUTH)
-
-			if err != nil {
-				if userRecord == nil {
-					rData.SetJsonErrorCodeResponse(err.Error()) //nousername
-				} else {
-					rData.SetJsonErrorCodeWithDataResponse(err.Error(), pages.JsonMapGeneric{
-						"uid":   userRecord.GetKeyIntAsString(),
-						"email": userRecord.GetData().Email,
-						"fname": userRecord.GetData().FirstName,
-						"lname": userRecord.GetData().LastName,
-						"avid":  strconv.FormatInt(userRecord.GetData().AvatarId, 10),
-					})
-				}
-				return
-			}
-
-			response := pages.JsonMapGeneric{"jwt": jwtString}
-
 			var requestMeta LoginRequestMeta
+
 			if state.RequestMeta != "" {
 				if err := json.Unmarshal([]byte(state.RequestMeta), &requestMeta); err != nil {
 					rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
@@ -276,14 +261,26 @@ func OauthAction(rData *pages.RequestData) {
 				response["meta"] = requestMeta
 			}
 
+			_, _, jwtString, err := DoLogin(rData, userInfo.Id, "", audience, LOOKUP_TYPE_OAUTH)
+
+			if err != nil {
+				response["code"] = err.Error()
+				rData.SetJsonErrorResponse(response)
+				return
+			}
+
+			response["jwt"] = jwtString
 			rData.SetJsonSuccessResponse(response)
 			return
+
 		} else if actionType == "register" {
 			var requestMeta RegisterRequestMeta
 			if err := json.Unmarshal([]byte(state.RequestMeta), &requestMeta); err != nil {
 				rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
 				return
 			}
+
+			response["meta"] = requestMeta
 
 			registerInfo := &RegisterInfo{
 				Terms:        requestMeta.Terms,
@@ -301,7 +298,8 @@ func OauthAction(rData *pages.RequestData) {
 			//so the structure is there to separate lookup from actual record, and multiple lookups can be used to reference a single record
 			//and it was given lots of thought... but not actually used atm
 			if err := DoRegister(rData, registerInfo); err != nil {
-				rData.SetJsonErrorCodeResponse(err.Error())
+				response["code"] = err.Error()
+				rData.SetJsonErrorResponse(response)
 				return
 			}
 
@@ -316,15 +314,16 @@ func OauthAction(rData *pages.RequestData) {
 			jwtRecord, jwtString, err := auth.GetNewLoginJWT(rData, userRecord, audience)
 
 			if err != nil {
-				rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
+				response["code"] = statuscodes.TECHNICAL
+				rData.SetJsonErrorResponse(response)
 				return
 			}
 
 			//not this because it will destroy cookie-based login token too! rData.DeleteJwtWhenFinished = true
 			auth.DestroyToken(rData)
-			rData.SetJsonSuccessResponse(pages.JsonMapGeneric{
-				"jwt": jwtString,
-			})
+
+			response["jwt"] = jwtString
+			rData.SetJsonSuccessResponse(response)
 
 			if audience == auth.JWT_AUDIENCE_COOKIE {
 				auth.SetJWTCookie(rData, jwtString, jwtRecord.GetData().SessionId, int(auth.GetFinalDurationByAudience(jwtRecord.GetData().Audience)))
