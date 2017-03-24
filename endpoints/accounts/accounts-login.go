@@ -17,7 +17,7 @@ func GotLoginServiceRequest(rData *pages.RequestData) {
 	//
 	username := strings.ToLower(strings.TrimSpace(rData.HttpRequest.FormValue("uname")))
 	password := rData.HttpRequest.FormValue("pw")
-	audience := auth.JWT_AUDIENCE_APP //for web environments, we might want to allow setting this to cookie...
+	audience := strings.ToLower(strings.TrimSpace(rData.HttpRequest.FormValue("aud"))) //for web environments, we might want to allow setting this to cookie...
 
 	userRecord, _, jwtString, err := DoLogin(rData, username, password, audience, LOOKUP_TYPE_USERNAME)
 
@@ -27,13 +27,15 @@ func GotLoginServiceRequest(rData *pages.RequestData) {
 
 			rData.SetJsonErrorCodeResponse(err.Error()) //nousername
 		} else {
-			rData.SetJsonErrorCodeWithDataResponse(err.Error(), pages.JsonMapGeneric{
-				"uid":   userRecord.GetKeyIntAsString(),
-				"email": userRecord.GetData().Email,
-				"fname": userRecord.GetData().FirstName,
-				"lname": userRecord.GetData().LastName,
-				"avid":  strconv.FormatInt(userRecord.GetData().AvatarId, 10),
-			})
+			userInfo := pages.JsonMapGeneric{
+				"uid":          userRecord.GetKeyIntAsString(),
+				"unameHistory": userRecord.GetData().UsernameHistory,
+				"fname":        userRecord.GetData().FirstName,
+				"lname":        userRecord.GetData().LastName,
+				"avid":         strconv.FormatInt(userRecord.GetData().AvatarId, 10),
+			}
+
+			rData.SetJsonErrorCodeWithDataResponse(err.Error(), userInfo)
 		}
 
 		return

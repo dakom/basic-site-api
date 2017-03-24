@@ -23,6 +23,8 @@ type Config struct {
 
 	OAUTH_ALLOWED_SCHEMES []string
 	CORS_ALLOWED_ORIGINS  []string
+	CORS_ALLOWED_HEADERS  []string
+	CORS_ALLOWED_METHODS  []string
 
 	//https://developers.google.com/identity/protocols/OAuth2InstalledApp#choosingredirecturi
 	OAUTH_GOOGLE_CLIENTID       string

@@ -65,6 +65,7 @@ type StateInfo struct {
 }
 
 type RegisterRequestMeta struct {
+	Audience   string `json:"aud"`
 	Terms      bool   `json:"terms"`
 	Newsletter bool   `json:"newsletter"`
 	AppId      string `json:"appId"`
@@ -74,6 +75,7 @@ type RegisterRequestMeta struct {
 }
 
 type LoginRequestMeta struct {
+	Audience  string `json:"aud"`
 	AppId     string `json:"appId"`
 	AppName   string `json:"appName"`
 	AppScheme string `json:"appScheme"`
@@ -248,7 +250,6 @@ func OauthAction(rData *pages.RequestData) {
 		}
 
 		actionType := rData.HttpRequest.FormValue("action")
-		audience := auth.JWT_AUDIENCE_APP //for web environments, we might want to allow setting this to cookie...
 
 		if actionType == "login" {
 			var requestMeta LoginRequestMeta
@@ -261,7 +262,7 @@ func OauthAction(rData *pages.RequestData) {
 				response["meta"] = requestMeta
 			}
 
-			_, _, jwtString, err := DoLogin(rData, userInfo.Id, "", audience, LOOKUP_TYPE_OAUTH)
+			_, _, jwtString, err := DoLogin(rData, userInfo.Id, "", requestMeta.Audience, LOOKUP_TYPE_OAUTH)
 
 			if err != nil {
 				response["code"] = err.Error()
@@ -311,7 +312,7 @@ func OauthAction(rData *pages.RequestData) {
 			if err != nil {
 				userRecord = nil
 			}
-			jwtRecord, jwtString, err := auth.GetNewLoginJWT(rData, userRecord, audience)
+			jwtRecord, jwtString, err := auth.GetNewLoginJWT(rData, userRecord, requestMeta.Audience)
 
 			if err != nil {
 				response["code"] = statuscodes.TECHNICAL
@@ -325,7 +326,7 @@ func OauthAction(rData *pages.RequestData) {
 			response["jwt"] = jwtString
 			rData.SetJsonSuccessResponse(response)
 
-			if audience == auth.JWT_AUDIENCE_COOKIE {
+			if requestMeta.Audience == auth.JWT_AUDIENCE_COOKIE {
 				auth.SetJWTCookie(rData, jwtString, jwtRecord.GetData().SessionId, int(auth.GetFinalDurationByAudience(jwtRecord.GetData().Audience)))
 			}
 		}

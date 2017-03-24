@@ -28,6 +28,22 @@ func wrapRequest(pageConfigs map[string]*pages.PageConfig, siteConfig *custom.Co
 	}
 }
 
+func cullAllowedHeaders(requestedHeaderString string, allowedHeaders []string) []string {
+	var result []string
+	requestedHeaders := strings.Split(requestedHeaderString, ", ")
+	for _, requestedHeader := range requestedHeaders {
+		requestedHeader = strings.TrimSpace(requestedHeader)
+		for _, allowedHeader := range allowedHeaders {
+			if strings.ToLower(requestedHeader) == strings.ToLower(allowedHeader) {
+				result = append(result, requestedHeader)
+				break
+			}
+		}
+	}
+
+	return result
+}
+
 func gotPageRequest(w http.ResponseWriter, r *http.Request, pageConfigs map[string]*pages.PageConfig, siteConfig *custom.Config) {
 	var ok, isAuthorized, jwtWasRefreshed bool
 
@@ -50,18 +66,32 @@ func gotPageRequest(w http.ResponseWriter, r *http.Request, pageConfigs map[stri
 
 	*/
 
-	//CORS
-	//For now, we are not supporting preflight, rather the restriction is placed browser side
-	//see http://stackoverflow.com/questions/39725955/why-is-there-no-preflight-in-cors-for-post-requests-with-standard-content-type
-	origin := r.Header.Get("Origin")
+	//CORS - headers (cull the list for allowed headers)
+	accessControlAllowedHeaders := cullAllowedHeaders(r.Header.Get("Access-Control-Request-Headers"), siteConfig.CORS_ALLOWED_HEADERS)
+	if len(accessControlAllowedHeaders) > 0 {
+		rData.HttpWriter.Header().Add("Access-Control-Allow-Headers", strings.Join(accessControlAllowedHeaders, ", "))
+	}
 
-	rData.LogInfo("ORIGIN: %s", origin)
+	//CORS - methods (cull the list for allowed headers... we don't distinguish per header type for now)
+	accessControlAllowedMethods := cullAllowedHeaders(r.Header.Get("Access-Control-Request-Method"), siteConfig.CORS_ALLOWED_METHODS)
+	if len(accessControlAllowedMethods) > 0 {
+		rData.HttpWriter.Header().Add("Access-Control-Allow-Methods", strings.Join(accessControlAllowedMethods, ", "))
+	}
 
+	//CORS - origin (only one at a time- first come first serve)
+	accessControlRequestOrigin := r.Header.Get("Origin")
 	for _, allowedOrigin := range siteConfig.CORS_ALLOWED_ORIGINS {
-		if origin == allowedOrigin {
-			rData.HttpWriter.Header().Add("Access-Control-Allow-Origin", origin)
+		if strings.ToLower(accessControlRequestOrigin) == strings.ToLower(allowedOrigin) {
+			rData.HttpWriter.Header().Add("Access-Control-Allow-Origin", allowedOrigin)
+			rData.HttpWriter.Header().Add("Access-Control-Allow-Credentials", "true")
 			break
 		}
+	}
+
+	//CORS - preflight options, exit early
+	if strings.ToLower(r.Method) == "options" {
+		rData.HttpWriter.WriteHeader(200)
+		return
 	}
 
 	if rData.PageConfig, ok = pageConfigs[pageName]; !ok {

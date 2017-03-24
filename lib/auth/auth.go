@@ -74,8 +74,6 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 
 	rData.UserRecord = nil
 
-	rData.LogInfo("MASTER ACCOUNT SCOPE: %d", jwt_scopes.ACCOUNT_MASTER)
-	rData.LogInfo("SUB ACCOUNT SCOPE: %d", jwt_scopes.ACCOUNT_SUB)
 	//even if the jwt will ultimately be invalid, let's set the user info if it's available
 	if ok, iface := ValidateUserType(rData, rData.JwtRecord); ok {
 		validatedUserType = true
@@ -150,6 +148,7 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 
 	//validate scopes!
 	if rData.PageConfig.Scopes != 0 && !rData.SiteConfig.SUSPEND_AUTH {
+
 		if rData.JwtRecord == nil {
 			goto fail
 		}
@@ -166,7 +165,7 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 		if rData.PageConfig.SkipCsrfCheck != true && rData.JwtRecord.GetData().Audience == JWT_AUDIENCE_COOKIE && (rData.JwtRecord.GetData().SessionId == "" || rData.HttpRequest.Header.Get(rData.SiteConfig.JWT_HEADER_SID_NAME) == "" || rData.JwtRecord.GetData().SessionId != rData.HttpRequest.Header.Get(rData.SiteConfig.JWT_HEADER_SID_NAME)) {
 			//when jwt is from web view, it must validate against the session id set in the *header*, to prevent against csrf attacks
 			//exception is if scope is only PAGE_READ
-
+			rData.LogInfo("FAIL HERE! %s %s: %s", rData.JwtRecord.GetData().SessionId, rData.SiteConfig.JWT_HEADER_SID_NAME, rData.HttpRequest.Header.Get(rData.SiteConfig.JWT_HEADER_SID_NAME))
 			goto fail
 		}
 
@@ -236,15 +235,14 @@ func SignJwt(ctx context.Context, jwtRecord *datastore.JwtRecord) (string, error
 
 func SetJWTCookie(rData *pages.RequestData, jwtString string, sid string, duration int) {
 	if rData.HttpWriter != nil {
-		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: rData.SiteConfig.JWT_COOKIE_NAME, Value: jwtString, MaxAge: duration, HttpOnly: true, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
-		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: rData.SiteConfig.JWT_COOKIE_SID_NAME, Value: sid, MaxAge: duration, HttpOnly: false, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
+		rData.LogInfo("SETTING COOKIE! %s", rData.SiteConfig.COOKIE_DOMAIN)
+		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: rData.SiteConfig.JWT_COOKIE_NAME, Value: jwtString, MaxAge: duration, HttpOnly: rData.SiteConfig.COOKIE_SECURE, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
 	}
 }
 func UnsetJWTCookie(rData *pages.RequestData) {
 	if rData.HttpWriter != nil {
-
+		rData.LogInfo("DELETING COOKIE! %s", rData.SiteConfig.COOKIE_DOMAIN)
 		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: rData.SiteConfig.JWT_COOKIE_NAME, Value: "", MaxAge: -1, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
-		http.SetCookie(rData.HttpWriter, &http.Cookie{Name: rData.SiteConfig.JWT_COOKIE_SID_NAME, Value: "", MaxAge: -1, Secure: rData.SiteConfig.COOKIE_SECURE, Path: "/", Domain: rData.SiteConfig.COOKIE_DOMAIN})
 	}
 
 }
@@ -253,6 +251,10 @@ func GetNewLoginJWT(rData *pages.RequestData, userRecord *datastore.UserRecord, 
 	var scopes int64
 	var sid string
 	var err error
+
+	if audience != JWT_AUDIENCE_APP && audience != JWT_AUDIENCE_COOKIE {
+		return nil, "", fmt.Errorf(statuscodes.MISSINGINFO)
+	}
 
 	if userRecord.GetData().ParentId == 0 {
 		scopes = jwt_scopes.ACCOUNT_FULL_MASTER
@@ -345,6 +347,8 @@ func getJwtStringFromRequest(rData *pages.RequestData) string {
 	if jwtString == "" {
 		if jwtCookie, err := rData.HttpRequest.Cookie(rData.SiteConfig.JWT_COOKIE_NAME); err == nil {
 			jwtString = jwtCookie.Value
+
+			rData.LogInfo("GOT FROM COOKIE: %s", jwtString)
 		}
 	}
 
