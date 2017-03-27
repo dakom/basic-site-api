@@ -162,7 +162,7 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 			goto fail
 		}
 
-		if rData.PageConfig.SkipCsrfCheck != true && rData.JwtRecord.GetData().Audience == JWT_AUDIENCE_COOKIE && (rData.JwtRecord.GetData().SessionId == "" || rData.HttpRequest.Header.Get(rData.SiteConfig.JWT_HEADER_SID_NAME) == "" || rData.JwtRecord.GetData().SessionId != rData.HttpRequest.Header.Get(rData.SiteConfig.JWT_HEADER_SID_NAME)) {
+		if rData.SiteConfig.SKIP_CSRF_CHECK != true && rData.PageConfig.SkipCsrfCheck != true && rData.JwtRecord.GetData().Audience == JWT_AUDIENCE_COOKIE && (rData.JwtRecord.GetData().SessionId == "" || rData.HttpRequest.Header.Get(rData.SiteConfig.JWT_HEADER_SID_NAME) == "" || rData.JwtRecord.GetData().SessionId != rData.HttpRequest.Header.Get(rData.SiteConfig.JWT_HEADER_SID_NAME)) {
 			//when jwt is from web view, it must validate against the session id set in the *header*, to prevent against csrf attacks
 			//exception is if scope is only PAGE_READ
 			rData.LogInfo("FAIL HERE! %s %s: %s", rData.JwtRecord.GetData().SessionId, rData.SiteConfig.JWT_HEADER_SID_NAME, rData.HttpRequest.Header.Get(rData.SiteConfig.JWT_HEADER_SID_NAME))
@@ -329,32 +329,6 @@ func GetFinalDurationByAudience(audience string) int64 {
 	}
 }
 
-func getJwtStringFromRequest(rData *pages.RequestData) string {
-	var jwtString string
-
-	//Get the jwt from cookie, header, parameter. Cookie last since it's inherent and we want to be able to override
-	if authHeader := rData.HttpRequest.Header.Get("Authorization"); authHeader != "" {
-		// Should be a bearer token
-		if len(authHeader) > 6 && strings.ToUpper(authHeader[0:7]) == "BEARER " {
-			jwtString = authHeader[7:]
-		}
-	}
-
-	if jwtString == "" {
-		jwtString = rData.HttpRequest.FormValue("jwt")
-	}
-
-	if jwtString == "" {
-		if jwtCookie, err := rData.HttpRequest.Cookie(rData.SiteConfig.JWT_COOKIE_NAME); err == nil {
-			jwtString = jwtCookie.Value
-
-			rData.LogInfo("GOT FROM COOKIE: %s", jwtString)
-		}
-	}
-
-	return jwtString
-}
-
 func GetJwtFromString(rData *pages.RequestData, jwtString string, forceDbCheck bool) (*datastore.JwtRecord, bool) {
 	var isExpired bool
 	var jwtRecord datastore.JwtRecord
@@ -473,4 +447,30 @@ func makeNewJwtFromInfo(rData *pages.RequestData, userID int64, userType string,
 	}
 
 	return &jwtRecord, jwtString, nil
+}
+
+func getJwtStringFromRequest(rData *pages.RequestData) string {
+	var jwtString string
+
+	//Get the jwt from cookie, header, parameter. Cookie last since it's inherent and we want to be able to override
+	if authHeader := rData.HttpRequest.Header.Get("Authorization"); authHeader != "" {
+		// Should be a bearer token
+		if len(authHeader) > 6 && strings.ToUpper(authHeader[0:7]) == "BEARER " {
+			jwtString = authHeader[7:]
+		}
+	}
+
+	if jwtString == "" {
+		jwtString = rData.HttpRequest.FormValue("jwt")
+	}
+
+	if jwtString == "" {
+		if jwtCookie, err := rData.HttpRequest.Cookie(rData.SiteConfig.JWT_COOKIE_NAME); err == nil {
+			jwtString = jwtCookie.Value
+
+			rData.LogInfo("GOT FROM COOKIE: %s", jwtString)
+		}
+	}
+
+	return jwtString
 }

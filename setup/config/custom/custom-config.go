@@ -46,4 +46,6 @@ type Config struct {
 	JWT_COOKIE_SID_NAME            string
 	JWT_HEADER_SID_NAME            string
 	REQUEST_SOURCE_APPENGINE_APPID string
+
+	SKIP_CSRF_CHECK bool
 }

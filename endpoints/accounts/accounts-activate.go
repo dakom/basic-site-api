@@ -31,7 +31,12 @@ func GotActivateRequest(rData *pages.RequestData) {
 
 		params := url.Values{}
 		params.Set("uid", strconv.FormatInt(rData.UserRecord.GetKey().IntID(), 10))
-
+		if rData.HttpRequest.FormValue("appId") != "" {
+			params.Set("appId", rData.HttpRequest.FormValue("appId"))
+		}
+		if rData.HttpRequest.FormValue("appPort") != "" {
+			params.Set("appPort", rData.HttpRequest.FormValue("appPort"))
+		}
 		mailingListTask := taskqueue.NewPOSTTask("/"+pagenames.MAILINGLIST_SUBSCRIBE_WEBHOOK, params)
 		_, err = taskqueue.Add(rData.Ctx, mailingListTask, rData.SiteConfig.TASKQUEUE_MAILINGLIST)
 
@@ -75,7 +80,7 @@ func SendActivateTokenRequest(rData *pages.RequestData) {
 		return
 	}
 
-	url := rData.SiteConfig.EMAIL_TARGET_HOSTNAME + pagenames.APP_PAGE_ACCOUNT_ACTION_ACTIVATE + "/" + jwtString
+	url := rData.SiteConfig.EMAIL_TARGET_HOSTNAME + pagenames.APP_PAGE_ACCOUNT_ACTION_ACTIVATE + "/" + jwtString + appUrlParamsFromRequest(rData)
 
 	emailMessage := email.GetEmailActivationMessage(rData.HttpRequest.FormValue("locale"), url)
 	err = email.Send(rData, userRecord.GetFullName(), userRecord.GetData().Email, emailMessage)

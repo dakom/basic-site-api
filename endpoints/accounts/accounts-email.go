@@ -13,13 +13,13 @@ import (
 
 	"github.com/asaskevich/govalidator"
 
-	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
-	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 	"github.com/dakom/basic-site-api/lib/auth"
 	"github.com/dakom/basic-site-api/lib/auth/jwt_scopes"
 	"github.com/dakom/basic-site-api/lib/datastore"
 	"github.com/dakom/basic-site-api/lib/email"
 	"github.com/dakom/basic-site-api/lib/pages"
+	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
+	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 )
 
 func GotEmailChangeTokenRequest(rData *pages.RequestData) {
@@ -54,7 +54,7 @@ func GotEmailChangeTokenRequest(rData *pages.RequestData) {
 		return
 	}
 
-	url := rData.SiteConfig.EMAIL_TARGET_HOSTNAME + pagenames.APP_PAGE_ACCOUNT_ACTION_EMAIL_CHANGE + "/" + jwtString
+	url := rData.SiteConfig.EMAIL_TARGET_HOSTNAME + pagenames.APP_PAGE_ACCOUNT_ACTION_EMAIL_CHANGE + "/" + jwtString + appUrlParamsFromRequest(rData)
 
 	emailMessage := email.GetEmailChangeEmailAddressMessage(rData.HttpRequest.FormValue("locale"), url)
 	err = email.Send(rData, rData.UserRecord.GetFullName(), emailAddress, emailMessage)

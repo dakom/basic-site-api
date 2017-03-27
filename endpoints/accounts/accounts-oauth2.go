@@ -292,6 +292,8 @@ func OauthAction(rData *pages.RequestData) {
 				LastName:     userInfo.LastName,
 				LookupType:   LOOKUP_TYPE_OAUTH,
 				AvatarUrl:    userInfo.AvatarURL,
+				AppId:        requestMeta.AppId,
+				AppPort:      requestMeta.AppPort,
 			}
 
 			//theoretically, we could lookup the user's email address and allow syncing multiple accounts based on that email...

@@ -110,8 +110,9 @@ func SaveToAutoKey(c context.Context, dsi DsInterface) error {
 }
 
 //func SaveToAutoAncestorKey(c context.Context, dsi DsInterface, parentKey *gaeds.Key) error {
-func SaveToAutoAncestorKey(c context.Context, dsi DsInterface, parentKey *gaeds.Key) error {
+func SaveToAutoAncestorKey(c context.Context, dsi DsInterface, parentKeyVal interface{}) error {
 
+	parentKey := GetKeyFromVal(c, dsi.GetType(), parentKeyVal, nil)
 	incompleteKey := gaeds.NewIncompleteKey(c, dsi.GetType(), parentKey)
 	newKey, err := gaeds.Put(c, incompleteKey, dsi.GetRawData())
 
@@ -152,6 +153,16 @@ func CheckMultiGetResults(multiError error) ([]int, error) {
 	}
 
 	return nil, nil
+}
+
+func GetMultiKeys(c context.Context, kind string, keyVals []interface{}, commonAncestorKey interface{}) []*gaeds.Key {
+	keys := make([]*gaeds.Key, len(keyVals))
+
+	for idx, keyVal := range keyVals {
+		keys[idx] = GetKeyFromVal(c, kind, keyVal, commonAncestorKey)
+	}
+
+	return keys
 }
 
 func GetMultiKeysFromInts(c context.Context, kind string, keyVals []int64, commonAncestorKey interface{}) []*gaeds.Key {

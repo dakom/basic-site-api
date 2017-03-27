@@ -1,56 +1,31 @@
 package accounts
 
 import (
-	"strconv"
 	"strings"
 
-	"github.com/dakom/basic-site-api/lib/datastore"
 	"github.com/dakom/basic-site-api/lib/pages"
 	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
-	gaeds "google.golang.org/appengine/datastore"
 )
 
-type SubaccountInfo struct {
-	Id        string `json:"uid"`
-	Username  string `json:"uname"`
-	FirstName string `json:"fname"`
-	LastName  string `json:"lname"`
-	AvatarId  string `json:"avid"`
-}
-
 func SubaccountsList(rData *pages.RequestData) {
-	userIdInts := rData.UserRecord.GetData().SubAccountIds
-	userIdKeys := datastore.GetMultiKeysFromInts(rData.Ctx, datastore.USER_TYPE, userIdInts, nil)
+	userIds := rData.UserRecord.GetData().SubAccountIds
 
-	infoList := make([]SubaccountInfo, len(userIdKeys))
-
-	rData.LogInfo("Keys: %v", userIdInts)
-
-	if len(userIdKeys) > 0 {
-
-		userDatas := make([]datastore.UserData, len(userIdKeys))
-
-		if multiError := gaeds.GetMulti(rData.Ctx, userIdKeys, userDatas); multiError != nil {
-			rData.LogError("%v", multiError)
+	if len(userIds) > 0 {
+		userList, err := GetUserInfosList(rData, userIds)
+		if err != nil {
 			rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
 			return
 		}
 
-		for idx, userData := range userDatas {
-
-			infoList[idx] = SubaccountInfo{
-				Id:        strconv.FormatInt(userIdInts[idx], 10),
-				Username:  GetPrimaryUsername(&userData),
-				FirstName: userData.FirstName,
-				LastName:  userData.LastName,
-				AvatarId:  strconv.FormatInt(userData.AvatarId, 10),
-			}
-		}
+		rData.SetJsonSuccessResponse(pages.JsonMapGeneric{
+			"list": userList,
+		})
+	} else {
+		rData.SetJsonSuccessResponse(pages.JsonMapGeneric{
+			"list": []PublicAccountInfo{},
+		})
 	}
 
-	rData.SetJsonSuccessResponse(pages.JsonMapGeneric{
-		"list": infoList,
-	})
 }
 
 func CreateSubaccountRequest(rData *pages.RequestData) {

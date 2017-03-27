@@ -77,7 +77,7 @@ func sendChangePasswordToken(rData *pages.RequestData, userRecord *datastore.Use
 
 	}
 
-	url := rData.SiteConfig.EMAIL_TARGET_HOSTNAME + pagenames.APP_PAGE_ACCOUNT_ACTION_PASSWORD_RESET + "/" + jwtString
+	url := rData.SiteConfig.EMAIL_TARGET_HOSTNAME + pagenames.APP_PAGE_ACCOUNT_ACTION_PASSWORD_RESET + "/" + jwtString + appUrlParamsFromRequest(rData)
 	//check if userRecord.IsChild() and then get record of parent to actually get email address....
 
 	emailMessage := email.GetEmailChangePasswordMessage(rData.HttpRequest.FormValue("locale"), url)

@@ -1,7 +1,12 @@
 package accounts
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/dakom/basic-site-api/lib/datastore"
+	"github.com/dakom/basic-site-api/lib/pages"
+	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 
 	"golang.org/x/net/context"
 	gaeds "google.golang.org/appengine/datastore"
@@ -16,6 +21,93 @@ const (
 	LOOKUP_TYPE_USERNAME
 	LOOKUP_TYPE_OAUTH
 )
+
+type PublicAccountInfo struct {
+	Id        string `json:"uid"`
+	Username  string `json:"uname"`
+	FirstName string `json:"fname"`
+	LastName  string `json:"lname"`
+	AvatarId  string `json:"avid"`
+}
+
+func appUrlParamsFromRequest(rData *pages.RequestData) string {
+	var appUrl string
+	appId := strings.TrimSpace(rData.HttpRequest.FormValue("appId"))
+	appPort := strings.TrimSpace(rData.HttpRequest.FormValue("appPort"))
+
+	if appId != "" {
+		appUrl += "/" + appId
+	}
+	if appPort != "" {
+		appUrl += "/" + appPort
+	}
+
+	return appUrl
+}
+func GetUserInfosList(rData *pages.RequestData, ids []int64) ([]*PublicAccountInfo, error) {
+	userInfos, err := GetUserInfosMap(rData, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	userList := make([]*PublicAccountInfo, len(userInfos))
+	idx := 0
+	for _, userInfo := range userInfos {
+		userList[idx] = userInfo
+		idx++
+	}
+
+	return userList, nil
+}
+
+func GetUserInfosMap(rData *pages.RequestData, ids []int64) (map[int64]*PublicAccountInfo, error) {
+	userRecords, err := GetUserRecordsMap(rData, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	userMap := make(map[int64]*PublicAccountInfo)
+	for key, record := range userRecords {
+		userMap[key] = &PublicAccountInfo{
+			Id:        record.GetKeyIntAsString(),
+			Username:  GetPrimaryUsername(record.GetData()),
+			FirstName: record.GetData().FirstName,
+			LastName:  record.GetData().LastName,
+			AvatarId:  strconv.FormatInt(record.GetData().AvatarId, 10),
+		}
+	}
+
+	return userMap, nil
+}
+
+func GetUserRecordsMap(rData *pages.RequestData, ids []int64) (map[int64]*datastore.UserRecord, error) {
+
+	userKeys := datastore.GetMultiKeysFromInts(rData.Ctx, datastore.USER_TYPE, ids, nil)
+	userDatas := make([]*datastore.UserData, len(userKeys))
+
+	if multiError := gaeds.GetMulti(rData.Ctx, userKeys, userDatas); multiError != nil {
+		//theoretically we could just cull the bad ones... but missing users is really not ok
+		rData.LogError("%v", multiError)
+		rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
+		return nil, multiError
+	}
+
+	userMap := make(map[int64]*datastore.UserRecord)
+
+	for idx, userData := range userDatas {
+		userKey := userKeys[idx]
+		userId := ids[idx]
+
+		if userMap[userId] == nil {
+			userRecord := &datastore.UserRecord{}
+			datastore.SetKey(rData.Ctx, userRecord, userKey)
+			userRecord.SetData(userData)
+			userMap[userId] = userRecord
+		}
+	}
+
+	return userMap, nil
+}
 
 func GetFullNameShortened(userData *datastore.UserData) string {
 	name := userData.FirstName

@@ -196,6 +196,13 @@ func DecryptAesGcm(key []byte, cryptoText string) ([]byte, error) {
 }
 
 func EncryptAesCbc(iv []byte, key []byte, data []byte) ([]byte, error) {
+	if iv == nil {
+		randIv, err := RandomBytes(aes.BlockSize)
+		if err != nil {
+			return nil, err
+		}
+		iv = randIv
+	}
 	if len(data) == 0 || len(data)%aes.BlockSize != 0 {
 		data = Pkcs7Pad(data, aes.BlockSize)
 	}

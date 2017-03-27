@@ -33,6 +33,9 @@ type RegisterInfo struct {
 	Password     string
 	ParentId     int64
 
+	AppId   string
+	AppPort string
+
 	AvatarUrl  string
 	LookupType int64 //only used if subaccounts are allowed
 }
@@ -58,6 +61,8 @@ func GotRegisterServiceRequest(rData *pages.RequestData) {
 		LastName:     strings.TrimSpace(rData.HttpRequest.FormValue("lname")),
 		Password:     strings.TrimSpace(rData.HttpRequest.FormValue("pw")),
 		LookupType:   LOOKUP_TYPE_USERNAME,
+		AppId:        strings.TrimSpace(rData.HttpRequest.FormValue("appId")),
+		AppPort:      strings.TrimSpace(rData.HttpRequest.FormValue("appPort")),
 	}
 	if err := DoRegister(rData, info); err != nil {
 		rData.SetJsonErrorCodeResponse(err.Error())
@@ -121,6 +126,7 @@ func DoRegister(rData *pages.RequestData, info *RegisterInfo) error {
 
 	existingUserRecord, err := GetUserRecordViaUsername(rData.Ctx, info.Username)
 	if err != nil {
+
 		return errors.New(statuscodes.TECHNICAL)
 	}
 	if existingUserRecord != nil {
@@ -130,6 +136,7 @@ func DoRegister(rData *pages.RequestData, info *RegisterInfo) error {
 	passwordHash, err := cipher.NewPWHash(info.Password, nil)
 
 	if err != nil {
+
 		return errors.New(statuscodes.TECHNICAL)
 	}
 
@@ -185,10 +192,16 @@ func DoRegister(rData *pages.RequestData, info *RegisterInfo) error {
 		if !userRecord.GetData().IsActive {
 			params := url.Values{}
 			params.Set("uname", info.Username)
-
+			if info.AppId != "" {
+				params.Set("appId", info.AppId)
+			}
+			if info.AppPort != "" {
+				params.Set("appPort", info.AppPort)
+			}
 			activationTask := taskqueue.NewPOSTTask("/"+pagenames.ACCOUNT_ACTIVATE_SEND_TOKEN, params)
 			_, err = taskqueue.Add(rData.Ctx, activationTask, rData.SiteConfig.TASKQUEUE_REGISTER)
 			if err != nil {
+
 				return err
 			}
 		}
@@ -199,6 +212,12 @@ func DoRegister(rData *pages.RequestData, info *RegisterInfo) error {
 			//similarly since we have the flag in datastore, we could write a utility that culls the list before sending, even with tuning (i.e. cull 70% of non-activated addresses before sending a blast)
 			params := url.Values{}
 			params.Set("uid", strconv.FormatInt(userRecord.GetKey().IntID(), 10))
+			if info.AppId != "" {
+				params.Set("appId", info.AppId)
+			}
+			if info.AppPort != "" {
+				params.Set("appPort", info.AppPort)
+			}
 
 			if info.AvatarUrl != "" {
 				//in this case, set the url in the subscribe webhook to avoid a race condition
@@ -213,10 +232,17 @@ func DoRegister(rData *pages.RequestData, info *RegisterInfo) error {
 			params := url.Values{}
 			params.Set("uid", strconv.FormatInt(userRecord.GetKey().IntID(), 10))
 			params.Set("aurl", info.AvatarUrl)
+			if info.AppId != "" {
+				params.Set("appId", info.AppId)
+			}
+			if info.AppPort != "" {
+				params.Set("appPort", info.AppPort)
+			}
 
 			avatarTask := taskqueue.NewPOSTTask("/"+pagenames.ACCOUNT_AVATAR_PULL_WEBHOOK, params)
 			_, err = taskqueue.Add(rData.Ctx, avatarTask, rData.SiteConfig.TASKQUEUE_REGISTER)
 			if err != nil {
+				rData.LogInfo("AVATAR ERROR %v", err.Error())
 				return err
 			}
 		}
@@ -227,6 +253,7 @@ func DoRegister(rData *pages.RequestData, info *RegisterInfo) error {
 	}, &opts)
 
 	if err != nil {
+
 		return errors.New(statuscodes.TECHNICAL)
 	}
 
