@@ -28,11 +28,10 @@ func GotLoginServiceRequest(rData *pages.RequestData) {
 			rData.SetJsonErrorCodeResponse(err.Error()) //nousername
 		} else {
 			userInfo := pages.JsonMapGeneric{
-				"uid":          userRecord.GetKeyIntAsString(),
-				"unameHistory": userRecord.GetData().UsernameHistory,
-				"fname":        userRecord.GetData().FirstName,
-				"lname":        userRecord.GetData().LastName,
-				"avid":         strconv.FormatInt(userRecord.GetData().AvatarId, 10),
+				"uid":   userRecord.GetKeyIntAsString(),
+				"fname": userRecord.GetData().FirstName,
+				"lname": userRecord.GetData().LastName,
+				"avid":  strconv.FormatInt(userRecord.GetData().AvatarId, 10),
 			}
 
 			rData.SetJsonErrorCodeWithDataResponse(err.Error(), userInfo)

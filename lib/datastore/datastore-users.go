@@ -7,29 +7,24 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/log"
 
-	"github.com/lionelbarrow/braintree-go"
 	gaesr "google.golang.org/appengine/search"
 )
 
 const USER_TYPE = "User"
 
 type UserData struct {
-	Email           string
-	UsernameHistory []string
-	FirstName       string
-	LastName        string
-	Password        string
-	IsActive        bool
-	AvatarId        int64
-	Roles           int64
-	ParentId        int64
-	SubAccountIds   []int64
-	Credits         []UserCredits
-	MediaAccessIds  []int64
-	ContactUserIds  []int64
-	AddedDate       time.Time
-
 	UserMailinglistData
+	Email         string
+	DisplayName   string
+	FirstName     string
+	LastName      string
+	Password      string
+	IsActive      bool
+	AvatarId      int64
+	Roles         int64
+	ParentId      int64
+	SubAccountIds []int64
+	AddedDate     time.Time
 }
 
 //these sub-structsjust to make it easier to manage
@@ -37,12 +32,6 @@ type UserMailinglistData struct {
 	EmailId                string
 	ListEmailId            string
 	HasMarketingNewsletter bool
-}
-
-type UserCredits struct {
-	TransactionHistoryId int64 //how the credits were purchased
-	AmountRemaining      int64
-	CostOfSingleCredit   braintree.Decimal
 }
 
 //boilerplate
@@ -99,15 +88,6 @@ func (dsr *UserRecord) GetFullNameShortened() string {
 	name += dsr.GetData().LastName[:1] + "."
 
 	return name
-}
-
-func (dsr *UserRecord) GetRemainingCredits() int64 {
-	var total int64
-	for _, userCredits := range dsr.GetData().Credits {
-		total += userCredits.AmountRemaining
-	}
-
-	return total
 }
 
 func (dsr *UserRecord) AddToSearch(c context.Context) error {

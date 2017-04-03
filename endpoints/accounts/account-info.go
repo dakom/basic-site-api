@@ -15,6 +15,7 @@ func GotSettingsInfoServiceRequest(rData *pages.RequestData) {
 		"email": rData.UserRecord.GetData().Email,
 		"fname": rData.UserRecord.GetData().FirstName,
 		"lname": rData.UserRecord.GetData().LastName,
+		"dname": rData.UserRecord.GetData().DisplayName,
 		"avid":  strconv.FormatInt(rData.UserRecord.GetData().AvatarId, 10),
 	})
 }

@@ -1,11 +1,16 @@
 package custom
 
+type DisplayNameValidator interface {
+	IsValid(string) bool
+}
+
 type Config struct {
-	VERSION            string
-	MAILINGLIST_TYPE   string
-	SENDGRID_APIKEY    string
-	SENDGRID_FROM_NAME string
-	SENDGRID_FROM_ADDR string
+	DisplayNameValidator func(string) bool
+	VERSION              string
+	MAILINGLIST_TYPE     string
+	SENDGRID_APIKEY      string
+	SENDGRID_FROM_NAME   string
+	SENDGRID_FROM_ADDR   string
 
 	MAILCHIMP_APIKEY      string
 	MAILCHIMP_APIENDPOINT string

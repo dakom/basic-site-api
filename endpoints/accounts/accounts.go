@@ -23,11 +23,9 @@ const (
 )
 
 type PublicAccountInfo struct {
-	Id        string `json:"uid"`
-	Username  string `json:"uname"`
-	FirstName string `json:"fname"`
-	LastName  string `json:"lname"`
-	AvatarId  string `json:"avid"`
+	Id          string `json:"uid"`
+	DisplayName string `json:"dname"`
+	AvatarId    string `json:"avid"`
 }
 
 func appUrlParamsFromRequest(rData *pages.RequestData) string {
@@ -68,16 +66,18 @@ func GetUserInfosMap(rData *pages.RequestData, ids []int64) (map[int64]*PublicAc
 
 	userMap := make(map[int64]*PublicAccountInfo)
 	for key, record := range userRecords {
-		userMap[key] = &PublicAccountInfo{
-			Id:        record.GetKeyIntAsString(),
-			Username:  GetPrimaryUsername(record.GetData()),
-			FirstName: record.GetData().FirstName,
-			LastName:  record.GetData().LastName,
-			AvatarId:  strconv.FormatInt(record.GetData().AvatarId, 10),
-		}
+		userMap[key] = GetUserInfo(record)
 	}
 
 	return userMap, nil
+}
+
+func GetUserInfo(userRecord *datastore.UserRecord) *PublicAccountInfo {
+	return &PublicAccountInfo{
+		Id:          userRecord.GetKeyIntAsString(),
+		DisplayName: userRecord.GetData().DisplayName,
+		AvatarId:    strconv.FormatInt(userRecord.GetData().AvatarId, 10),
+	}
 }
 
 func GetUserRecordsMap(rData *pages.RequestData, ids []int64) (map[int64]*datastore.UserRecord, error) {
@@ -122,15 +122,6 @@ func GetFullNameShortened(userData *datastore.UserData) string {
 	name += userData.LastName[:1] + "."
 
 	return name
-}
-
-func GetPrimaryUsername(userData *datastore.UserData) string {
-	namesLength := len(userData.UsernameHistory)
-	if namesLength == 0 {
-		return ""
-	}
-
-	return userData.UsernameHistory[namesLength-1]
 }
 
 func GetUsernamesFromKey(c context.Context, userKey *gaeds.Key) ([]string, error) {

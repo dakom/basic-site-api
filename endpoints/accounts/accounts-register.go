@@ -124,6 +124,11 @@ func DoRegister(rData *pages.RequestData, info *RegisterInfo) error {
 		return errors.New(statuscodes.INVALID_PASSWORD)
 	}
 
+	displayName := info.FirstName + " " + info.LastName[0:1] + "."
+	if rData.SiteConfig.DisplayNameValidator != nil && !rData.SiteConfig.DisplayNameValidator(displayName) {
+		return errors.New(statuscodes.INVALID_DISPLAYNAME)
+	}
+
 	existingUserRecord, err := GetUserRecordViaUsername(rData.Ctx, info.Username)
 	if err != nil {
 
@@ -146,14 +151,13 @@ func DoRegister(rData *pages.RequestData, info *RegisterInfo) error {
 
 	err = gaeds.RunInTransaction(rData.Ctx, func(c context.Context) error {
 		var userRecord datastore.UserRecord
-		userRecord.GetData().UsernameHistory = []string{info.Username}
 		userRecord.GetData().Email = info.EmailAddress
 		userRecord.GetData().FirstName = info.FirstName
 		userRecord.GetData().LastName = info.LastName
 		userRecord.GetData().Password = passwordHash
 		userRecord.GetData().AddedDate = time.Now()
 		userRecord.GetData().Roles = auth_roles.USER
-
+		userRecord.GetData().DisplayName = displayName
 		/*Conceptually subaccounts could have been created as actual children of master accounts
 		  However that would require knowing the parentid in conjunction with the username
 		  And/or storing it with the lookup record ... and across the pipeline.

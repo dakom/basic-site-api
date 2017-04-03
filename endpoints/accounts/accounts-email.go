@@ -116,8 +116,6 @@ func GotEmailChangeActionRequest(rData *pages.RequestData) {
 
 		err = datastore.LoadFromKey(rData.Ctx, &lookupRecord, rData.UserRecord.GetData().Email)
 		if err == nil {
-			//if it's valid to delete, it means that it was a username at some point, so let's just append the history
-			rData.UserRecord.GetData().UsernameHistory = append(rData.UserRecord.GetData().UsernameHistory, emailAddress)
 
 			err = datastore.Delete(c, &lookupRecord)
 			if err != nil {
