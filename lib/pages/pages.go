@@ -36,6 +36,7 @@ type RequestData struct {
 	HttpRequest               *http.Request
 	JsonResponse              JsonResponse
 	HttpStatusResponseMessage string
+	HttpStatusResponseBytes   []byte
 	HttpStatusResponseCode    int
 	HttpRedirectDestination   string
 	HttpRedirectIsPermanent   bool
@@ -168,7 +169,14 @@ func (rData *RequestData) OutputImageJpg(img *image.Image) error {
 
 func (rData *RequestData) OutputHttpResponse() {
 	rData.HttpWriter.WriteHeader(rData.HttpStatusResponseCode)
-	io.WriteString(rData.HttpWriter, rData.HttpStatusResponseMessage)
+	if rData.HttpStatusResponseMessage != "" {
+		io.WriteString(rData.HttpWriter, rData.HttpStatusResponseMessage)
+	}
+
+	if len(rData.HttpStatusResponseBytes) > 0 {
+		rData.HttpWriter.Write(rData.HttpStatusResponseBytes)
+	}
+
 }
 
 func (rData *RequestData) OutputHtmlString(msg string, args ...interface{}) {
