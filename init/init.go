@@ -30,7 +30,7 @@ func wrapRequest(pageConfigs map[string]*pages.PageConfig, siteConfig *custom.Co
 
 func cullAllowedHeaders(requestedHeaderString string, allowedHeaders []string) []string {
 	var result []string
-	requestedHeaders := strings.Split(requestedHeaderString, ", ")
+	requestedHeaders := strings.Split(requestedHeaderString, ",")
 	for _, requestedHeader := range requestedHeaders {
 		requestedHeader = strings.TrimSpace(requestedHeader)
 		for _, allowedHeader := range allowedHeaders {
