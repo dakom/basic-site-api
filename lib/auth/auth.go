@@ -82,19 +82,6 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 		}
 	}
 
-	//check against Roles - only one must be fulfilled
-	if rData.PageConfig.Roles != 0 {
-		if rData.UserRecord == nil {
-			goto fail
-		}
-
-		if (rData.PageConfig.Roles & uint64(rData.UserRecord.GetData().Roles)) == 0 {
-
-			goto fail
-		}
-
-	}
-
 	//check for internal auth stuff
 
 	if rData.PageConfig.RequestSource == REQUEST_SOURCE_APPENGINE_TASK {
@@ -261,6 +248,8 @@ func GetNewLoginJWT(rData *pages.RequestData, userRecord *datastore.UserRecord, 
 	} else {
 		scopes = jwt_scopes.ACCOUNT_FULL_SUB
 	}
+
+	scopes |= userRecord.GetData().ExtraScopes
 
 	if audience == JWT_AUDIENCE_COOKIE {
 		sid, err = text.RandomHexString(12)

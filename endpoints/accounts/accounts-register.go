@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/dakom/basic-site-api/lib/auth/auth_roles"
 	"github.com/dakom/basic-site-api/lib/datastore"
 	"github.com/dakom/basic-site-api/lib/pages"
 	"github.com/dakom/basic-site-api/lib/utils/cipher"
@@ -156,7 +155,6 @@ func DoRegister(rData *pages.RequestData, info *RegisterInfo) error {
 		userRecord.GetData().LastName = info.LastName
 		userRecord.GetData().Password = passwordHash
 		userRecord.GetData().AddedDate = time.Now()
-		userRecord.GetData().Roles = auth_roles.USER
 		userRecord.GetData().DisplayName = displayName
 		/*Conceptually subaccounts could have been created as actual children of master accounts
 		  However that would require knowing the parentid in conjunction with the username

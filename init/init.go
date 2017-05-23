@@ -144,7 +144,7 @@ func gotPageRequest(w http.ResponseWriter, r *http.Request, pageConfigs map[stri
 		statusCode := statuscodes.AUTH
 
 		switch rData.PageConfig.Scopes {
-		case jwt_scopes.TRANSACTION_PAYMENT, jwt_scopes.OOB_USER_PASSWORD_CHANGE, jwt_scopes.OOB_USER_EMAIL_CHANGE, jwt_scopes.OOB_USER_ACTIVATE:
+		case jwt_scopes.OOB_USER_PASSWORD_CHANGE, jwt_scopes.OOB_USER_EMAIL_CHANGE, jwt_scopes.OOB_USER_ACTIVATE:
 			statusCode = statuscodes.AUTH_OOB
 		}
 

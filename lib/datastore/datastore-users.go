@@ -21,7 +21,7 @@ type UserData struct {
 	Password      string
 	IsActive      bool
 	AvatarId      int64
-	Roles         int64
+	ExtraScopes   int64
 	ParentId      int64
 	SubAccountIds []int64
 	AddedDate     time.Time

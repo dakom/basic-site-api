@@ -25,7 +25,6 @@ type PageConfig struct {
 	RequiresDBScopeCheck bool
 	AcceptAnyScope       bool
 	SkipCsrfCheck        bool
-	Roles                uint64
 }
 
 type RequestData struct {
