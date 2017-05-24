@@ -16,9 +16,6 @@ const (
 
 	//OAUTH
 	OAUTH_STATE
-
-	//extra account roles
-	ACCOUNT_EXTRA_ADMIN
 )
 
 const ACCOUNT_FULL_ANY = ACCOUNT_READ | ACCOUNT_WRITE
