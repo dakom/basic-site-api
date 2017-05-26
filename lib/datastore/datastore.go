@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"appengine"
+	"google.golang.org/appengine"
 
 	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 
@@ -138,21 +138,23 @@ func Delete(c context.Context, dsi DsInterface) error {
 	return gaeds.Delete(c, dsi.GetKey())
 }
 
-func CheckMultiGetResults(multiError error) ([]int, error) {
-	var failedIndexes []int
+func CheckMultiGetResults(multiError error) (map[int]bool, error) {
+	indexes := make(map[int]bool)
 
 	if me, ok := multiError.(appengine.MultiError); ok {
 		for idx, merr := range me {
 			//if merr is nil, the index did not contain an error
-			if merr != nil {
-				failedIndexes = append(failedIndexes, idx)
+			if merr == nil {
+				indexes[idx] = true
+			} else {
+				indexes[idx] = false
 			}
 		}
 	} else if me != nil {
 		return nil, me
 	}
 
-	return nil, nil
+	return indexes, nil
 }
 
 func GetMultiKeys(c context.Context, kind string, keyVals []interface{}, commonAncestorKey interface{}) []*gaeds.Key {
