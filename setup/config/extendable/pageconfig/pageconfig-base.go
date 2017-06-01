@@ -3,6 +3,7 @@ package pageconfig
 import (
 	"github.com/dakom/basic-site-api/endpoints/accounts"
 	account_webhooks "github.com/dakom/basic-site-api/endpoints/accounts/webhooks"
+	"github.com/dakom/basic-site-api/endpoints/ping"
 	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
 
 	"github.com/dakom/basic-site-api/lib/auth"
@@ -47,6 +48,10 @@ func GetPageConfigs(extraPageConfigs map[string]*pages.PageConfig) map[string]*p
 		//subaccounts
 		"account/subaccounts-list":   &pages.PageConfig{Handler: accounts.SubaccountsList, HandlerType: pages.HANDLER_TYPE_JSON, Scopes: jwt_scopes.ACCOUNT_FULL_MASTER},
 		"account/subaccounts-create": &pages.PageConfig{Handler: accounts.CreateSubaccountRequest, HandlerType: pages.HANDLER_TYPE_JSON, Scopes: jwt_scopes.ACCOUNT_FULL_MASTER},
+
+		//ping/pong - simple util to test roundtripping
+		"ping": &pages.PageConfig{Handler: ping.GotPongRequest, HandlerType: pages.HANDLER_TYPE_JSON, Scopes: jwt_scopes.ACCOUNT_FULL_ANY},
+
 		/*
 		 *
 		 *  THE FUN STUFF!!!!!!!!!!!!!!!!!!!!!

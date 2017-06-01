@@ -65,7 +65,7 @@ func ValidateUserType(rData *pages.RequestData, jwtRecord *datastore.JwtRecord) 
 //hasRefreshed is returned instead of mixed in here since the response type might be html, cookies, etc.
 
 func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
-	var isValid, dbIsValid, hasRefreshed, isExpired, validatedUserType bool
+	var isValid, dbIsValid, willRefresh, isExpired, validatedUserType, requiresDbUpdate bool
 	var dbRecord *datastore.JwtRecord
 
 	rData.JwtString = getJwtStringFromRequest(rData)
@@ -102,22 +102,12 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 	if rData.JwtRecord != nil {
 
 		if isExpired {
-
 			dbRecord, dbIsValid = GetJwtFromDb(rData, rData.JwtRecord.GetKey())
 			if !dbIsValid {
-
 				rData.JwtRecord = nil
 			} else {
 				rData.JwtRecord = dbRecord
-				rData.JwtRecord.GetData().ExpiresAt = time.Now().Add(time.Duration(JWT_DURATION_SHORT) * time.Second).Unix()
-
-				if updatedJwtString, err := SignJwt(rData.Ctx, rData.JwtRecord); err != nil {
-					rData.JwtRecord = nil
-				} else {
-					// no need to save the new one to the db, unless it's near Final Expires time (see below)
-					rData.JwtString = updatedJwtString
-					hasRefreshed = true
-				}
+				willRefresh = true
 			}
 		} else if rData.PageConfig.RequiresDBScopeCheck || rData.JwtRecord.GetData().Audience == JWT_AUDIENCE_OOB {
 			//only needs to check if jwt is not expired since an expired jwt validates against the database already
@@ -179,12 +169,33 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 	//f it's too close (i.e. time remaining is less than half of original duration)... lets sessions last longer while active
 	if rData.JwtRecord != nil {
 		durationByAudience := GetFinalDurationByAudience(rData.JwtRecord.GetData().Audience)
-
 		if durationByAudience != JWT_DURATION_NEVER {
 			finalExpireDiff := (rData.JwtRecord.GetData().FinalExpires - time.Now().Unix())
 			if finalExpireDiff < durationByAudience/2 {
 				rData.JwtRecord.GetData().FinalExpires = time.Now().Add(time.Duration(durationByAudience) * time.Second).Unix()
-				datastore.Save(rData.Ctx, rData.JwtRecord) //we don't care about errors here
+				requiresDbUpdate = true
+			}
+		}
+
+		if willRefresh {
+			var err error
+			rData.JwtRecord.GetData().ExpiresAt = time.Now().Add(time.Duration(GetInitialDurationByAudience(rData.JwtRecord.GetData().Audience)) * time.Second).Unix()
+
+			if rData.JwtRecord.GetData().SessionId != "" {
+				if rData.JwtRecord.GetData().SessionId, err = text.RandomHexString(12); err != nil {
+					goto fail
+				}
+				requiresDbUpdate = true
+			}
+
+			if rData.JwtString, err = SignJwt(rData.Ctx, rData.JwtRecord); err != nil {
+				goto fail
+			}
+		}
+
+		if requiresDbUpdate {
+			if err := datastore.Save(rData.Ctx, rData.JwtRecord); err != nil {
+				goto fail
 			}
 		}
 	}
@@ -201,7 +212,7 @@ fail:
 	isValid = false
 
 complete:
-	return isValid, hasRefreshed
+	return isValid, willRefresh
 }
 
 func SignJwt(ctx context.Context, jwtRecord *datastore.JwtRecord) (string, error) {
@@ -305,15 +316,23 @@ func DestroyToken(rData *pages.RequestData) error {
 
 }
 
+func GetInitialDurationByAudience(audience string) int64 {
+	switch audience {
+	case JWT_AUDIENCE_APP:
+		return JWT_DURATION_LONG
+	default:
+		return JWT_DURATION_SHORT
+	}
+}
 func GetFinalDurationByAudience(audience string) int64 {
 	switch audience {
 	case JWT_AUDIENCE_APP:
 		return JWT_DURATION_LONG
 		//return JWT_DURATION_NEVER
 	case JWT_AUDIENCE_COOKIE:
-		return JWT_DURATION_SHORT
+		return JWT_DURATION_LONG
 	default: //oob and system
-		return JWT_DURATION_SHORT
+		return JWT_DURATION_SHORT //same as initial expiration
 
 	}
 }
@@ -404,7 +423,7 @@ func GetJwtFromDb(rData *pages.RequestData, keyVal interface{}) (*datastore.JwtR
 func makeNewJwtFromInfo(rData *pages.RequestData, userID int64, userType string, scopes int64, audience string, sid string, subject string, extra string) (*datastore.JwtRecord, string, error) {
 
 	currentTime := time.Now().Unix()
-	expirationTime := time.Now().Add(time.Duration(JWT_DURATION_SHORT) * time.Second).Unix()
+	expirationTime := time.Now().Add(time.Duration(GetInitialDurationByAudience(audience)) * time.Second).Unix()
 	finalExpirationTime := GetFinalDurationByAudience(audience)
 	if finalExpirationTime != -1 {
 		finalExpirationTime = time.Now().Add(time.Duration(GetFinalDurationByAudience(audience)) * time.Second).Unix()
