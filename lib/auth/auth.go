@@ -24,8 +24,9 @@ const (
 	JWT_USERTYPE_USER_RECORD string = "usr"
 	JWT_USERTYPE_SYSTEM_ID   string = "sys"
 
-	JWT_DURATION_LONG  int64 = 604800
 	JWT_DURATION_SHORT int64 = 3600
+	JWT_DURATION_LONG  int64 = 604800
+
 	JWT_DURATION_NEVER int64 = -1
 
 	REQUEST_SOURCE_APPENGINE_TASK string = "appengine-task"
@@ -65,7 +66,7 @@ func ValidateUserType(rData *pages.RequestData, jwtRecord *datastore.JwtRecord) 
 //hasRefreshed is returned instead of mixed in here since the response type might be html, cookies, etc.
 
 func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
-	var isValid, dbIsValid, willRefresh, isExpired, validatedUserType, requiresDbUpdate bool
+	var isValid, dbIsValid, isExpired, validatedUserType bool
 	var dbRecord *datastore.JwtRecord
 
 	rData.JwtString = getJwtStringFromRequest(rData)
@@ -97,29 +98,17 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 		}
 	}
 
-	//token exists and is signed properly... but maybe it's expired and needs a refresh or requires additional check against db
+	//token exists and is signed properly... but maybe it's expired (initial expirey) or requires additional check against db
 	//failure here resets jwtMap to nil, i.e. as though no valid one were ever supplied
 	if rData.JwtRecord != nil {
 
-		if isExpired {
+		if isExpired || rData.PageConfig.RequiresDBScopeCheck || rData.JwtRecord.GetData().Audience == JWT_AUDIENCE_OOB {
 			dbRecord, dbIsValid = GetJwtFromDb(rData, rData.JwtRecord.GetKey())
 			if !dbIsValid {
 				rData.JwtRecord = nil
 			} else {
 				rData.JwtRecord = dbRecord
-				willRefresh = true
 			}
-		} else if rData.PageConfig.RequiresDBScopeCheck || rData.JwtRecord.GetData().Audience == JWT_AUDIENCE_OOB {
-			//only needs to check if jwt is not expired since an expired jwt validates against the database already
-			dbRecord, dbIsValid = GetJwtFromDb(rData, rData.JwtRecord.GetKey())
-			if !dbIsValid {
-
-				rData.JwtRecord = nil
-			} else {
-
-				rData.JwtRecord = dbRecord
-			}
-
 		}
 	}
 
@@ -168,16 +157,18 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 	//all is validated... if we grabbed the rData.JwtRecord at some point (check against db), might as well update long expirey here
 	//f it's too close (i.e. time remaining is less than half of original duration)... lets sessions last longer while active
 	if rData.JwtRecord != nil {
+		var updateDb bool
 		durationByAudience := GetFinalDurationByAudience(rData.JwtRecord.GetData().Audience)
 		if durationByAudience != JWT_DURATION_NEVER {
 			finalExpireDiff := (rData.JwtRecord.GetData().FinalExpires - time.Now().Unix())
 			if finalExpireDiff < durationByAudience/2 {
 				rData.JwtRecord.GetData().FinalExpires = time.Now().Add(time.Duration(durationByAudience) * time.Second).Unix()
-				requiresDbUpdate = true
+				updateDb = true
 			}
 		}
 
-		if willRefresh {
+		//If the jwt were originally expired, but is valid here - means it just needs to be refreshed
+		if isExpired {
 			var err error
 			rData.JwtRecord.GetData().ExpiresAt = time.Now().Add(time.Duration(GetInitialDurationByAudience(rData.JwtRecord.GetData().Audience)) * time.Second).Unix()
 
@@ -185,7 +176,7 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 				if rData.JwtRecord.GetData().SessionId, err = text.RandomHexString(12); err != nil {
 					goto fail
 				}
-				requiresDbUpdate = true
+				updateDb = true
 			}
 
 			if rData.JwtString, err = SignJwt(rData.Ctx, rData.JwtRecord); err != nil {
@@ -193,7 +184,7 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 			}
 		}
 
-		if requiresDbUpdate {
+		if updateDb {
 			if err := datastore.Save(rData.Ctx, rData.JwtRecord); err != nil {
 				goto fail
 			}
@@ -212,7 +203,7 @@ fail:
 	isValid = false
 
 complete:
-	return isValid, willRefresh
+	return isValid, isExpired
 }
 
 func SignJwt(ctx context.Context, jwtRecord *datastore.JwtRecord) (string, error) {
