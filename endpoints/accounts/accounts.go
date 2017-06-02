@@ -49,8 +49,9 @@ func GetUserInfosList(rData *pages.RequestData, ids []int64) ([]*PublicAccountIn
 	}
 
 	userList := make([]*PublicAccountInfo, len(userInfos))
+
 	idx := 0
-	for _, userInfo := range userInfos {
+	for _, userInfo := range userInfos { //is a map, not slice... counter needs to be separate
 		userList[idx] = userInfo
 		idx++
 	}
@@ -124,19 +125,30 @@ func GetFullNameShortened(userData *datastore.UserData) string {
 	return name
 }
 
-func GetUsernamesFromKey(c context.Context, userKey *gaeds.Key) ([]string, error) {
-	var lookupDatas []datastore.UsernameLookupData
-	var usernames []string
-	query := gaeds.NewQuery(datastore.USER_NAME_LOOKUP_TYPE).Filter("UserId =", userKey.IntID())
+func GetUsernamesForIds(rData *pages.RequestData, userIds []int64) (map[int64][]string, error) {
 
-	keys, err := query.GetAll(c, &lookupDatas)
+	var lookupDatas []datastore.UsernameLookupData
+	query := gaeds.NewQuery(datastore.USER_NAME_LOOKUP_TYPE)
+
+	for _, userId := range userIds {
+		query = query.Filter("UserId =", userId)
+		break
+	}
+
+	resultKeys, err := query.GetAll(rData.Ctx, &lookupDatas)
 	if err != nil {
 		return nil, err
 	}
 
-	usernames = make([]string, len(keys))
-	for idx, key := range keys {
-		usernames[idx] = key.StringID()
+	usernames := make(map[int64][]string)
+	for idx, _ := range resultKeys {
+		resultKey := resultKeys[idx]
+		lookupData := lookupDatas[idx]
+		userId := lookupData.UserId
+		if usernames[userId] == nil {
+			usernames[userId] = make([]string, 1)
+		}
+		usernames[userId] = append(usernames[userId], resultKey.StringID())
 	}
 
 	return usernames, nil
