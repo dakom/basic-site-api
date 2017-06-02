@@ -94,7 +94,7 @@ func (s *StateInfo) DestinationUrl(rData *pages.RequestData, jwtRecord *datastor
 	var newRecord datastore.JwtRecord
 
 	newRecord.SetData(&datastore.JwtData{
-		SelfId:       jwtData.SelfId,
+		SelfId:       jwtData.SelfId, //this probably isn't necessary since it'll be automatically filled with newRecord's GetData() in SignJwt, but doesn't hurt
 		Audience:     jwtData.Audience,
 		UserId:       jwtData.UserId,
 		UserType:     jwtData.UserType,

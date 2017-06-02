@@ -1,15 +1,21 @@
 package datastore
 
 import (
-	"github.com/dgrijalva/jwt-go"
 	"github.com/dakom/basic-site-api/lib/utils/text"
+	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/net/context"
 )
 
 const JWT_TYPE = "JWTLookup"
 
 type JwtData struct {
-	SelfId       string `json:"jti,omitempty" datastore:",noindex"` //A litle redundent since it's the datastore key, but keeping it here helps parsing too. This version is string according to jwt spec, even though it's really int64 in datastore
+	//SelfId is something we typically want to avoid with datastore records since the key is always available to the record
+	//However, in this case we want it in the data too since jti (as string, not int64 btw) is part of the spec
+	//The alternative would be to mix in the record's key ad-hoc and we'd lose the benefit of automatic json marshalling/unmarshalling
+	//Since GetData() is a function, it automatically sets SelfId when the data is requested :)
+	//So it's a tiny bit of redundency to gain clearer code and significantly better workflow
+
+	SelfId       string `json:"jti,omitempty" datastore:",noindex"`
 	Audience     string `json:"aud,omitempty" datastore:",noindex"`
 	UserId       int64  `json:"uid,omitempty" datastore:",noindex"`
 	UserType     string `json:"ut,omitempty" datastore:",noindex"`
