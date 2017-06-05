@@ -14,17 +14,18 @@ const USER_TYPE = "User"
 
 type UserData struct {
 	UserMailinglistData
-	Email         string
-	DisplayName   string
-	FirstName     string
-	LastName      string
-	Password      string
-	IsActive      bool
-	AvatarId      int64
-	ExtraScopes   int64
-	ParentId      int64
-	SubAccountIds []int64
-	AddedDate     time.Time
+	Email           string
+	DisplayName     string
+	FirstName       string
+	LastName        string
+	Password        string
+	IsActive        bool
+	AvatarId        int64
+	ExtraScopes     int64
+	ParentId        int64
+	SubAccountIds   []int64
+	UsernameLookups []string
+	AddedDate       time.Time
 }
 
 //these sub-structsjust to make it easier to manage

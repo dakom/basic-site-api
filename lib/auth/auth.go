@@ -66,7 +66,7 @@ func ValidateUserType(rData *pages.RequestData, jwtRecord *datastore.JwtRecord) 
 //hasRefreshed is returned instead of mixed in here since the response type might be html, cookies, etc.
 
 func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
-	var isValid, dbIsValid, isExpired, validatedUserType bool
+	var isValid, dbIsValid, isExpired, hasRefreshed, validatedUserType bool
 	var dbRecord *datastore.JwtRecord
 
 	rData.JwtString = getJwtStringFromRequest(rData)
@@ -182,6 +182,8 @@ func ValidatePageRequest(rData *pages.RequestData) (bool, bool) {
 			if rData.JwtString, err = SignJwt(rData.Ctx, rData.JwtRecord); err != nil {
 				goto fail
 			}
+
+			hasRefreshed = true
 		}
 
 		if updateDb {
@@ -203,7 +205,7 @@ fail:
 	isValid = false
 
 complete:
-	return isValid, isExpired
+	return isValid, hasRefreshed
 }
 
 func SignJwt(ctx context.Context, jwtRecord *datastore.JwtRecord) (string, error) {

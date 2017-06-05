@@ -18,6 +18,7 @@ import (
 	"github.com/dakom/basic-site-api/lib/datastore"
 	"github.com/dakom/basic-site-api/lib/email"
 	"github.com/dakom/basic-site-api/lib/pages"
+	"github.com/dakom/basic-site-api/lib/utils/slice"
 	"github.com/dakom/basic-site-api/setup/config/static/pagenames"
 	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 )
@@ -122,6 +123,12 @@ func GotEmailChangeActionRequest(rData *pages.RequestData) {
 				return err
 			}
 		}
+
+		//update user's lookup info
+		lookupStrings := rData.UserRecord.GetData().UsernameLookups
+		lookupStrings, _ = slice.DeleteFromString(lookupStrings, rData.UserRecord.GetData().Email)
+		lookupStrings = append(lookupStrings, emailAddress)
+		rData.UserRecord.GetData().UsernameLookups = lookupStrings
 
 		//update user's email address
 		rData.UserRecord.GetData().Email = emailAddress

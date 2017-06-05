@@ -1,12 +1,29 @@
 package slice
 
-func DeleteFromInt(haystack []int64, needle int64) ([]int64, int64) {
+func DeleteFromString(haystack []string, needle string) ([]string, int64) {
 	var numDeleted int64
 
-	for idx, val := range haystack {
+	for idx := 0; idx < len(haystack); idx++ {
+		val := haystack[idx]
 		if val == needle {
 			haystack = append(haystack[:idx], haystack[idx+1:]...)
 			numDeleted++
+			idx-- //need to go back an index since we've modified it
+		}
+	}
+
+	return haystack, numDeleted
+}
+
+func DeleteFromInt(haystack []int64, needle int64) ([]int64, int64) {
+	var numDeleted int64
+
+	for idx := 0; idx < len(haystack); idx++ {
+		val := haystack[idx]
+		if val == needle {
+			haystack = append(haystack[:idx], haystack[idx+1:]...)
+			numDeleted++
+			idx-- //need to go back an index since we've modified it
 		}
 	}
 

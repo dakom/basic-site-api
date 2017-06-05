@@ -161,7 +161,6 @@ func gotPageRequest(w http.ResponseWriter, r *http.Request, pageConfigs map[stri
 
 	//from here on in we are definately authorized!
 
-	//if audience is web, set it right away (cookies must come before all!)
 	if jwtWasRefreshed && rData.JwtRecord.GetData().Audience == auth.JWT_AUDIENCE_COOKIE {
 		auth.SetJWTCookie(rData, rData.JwtString, rData.JwtRecord.GetData().SessionId, int(auth.GetFinalDurationByAudience(rData.JwtRecord.GetData().Audience)))
 	}

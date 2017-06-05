@@ -4,11 +4,10 @@ import (
 	"strings"
 
 	"github.com/dakom/basic-site-api/lib/pages"
-	"github.com/dakom/basic-site-api/setup/config/static/statuscodes"
 )
 
 type SubAccountInfo struct {
-	*PublicAccountInfo
+	PublicAccountInfo
 	Username string `json:"uname"`
 }
 
@@ -16,37 +15,19 @@ func SubaccountsList(rData *pages.RequestData) {
 	userIds := rData.UserRecord.GetData().SubAccountIds
 
 	if len(userIds) > 0 {
-		publicUserList, err := GetUserInfosList(rData, userIds)
+		userRecords, err := GetUserRecordsMap(rData, userIds)
 		if err != nil {
-			rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
+			rData.SetJsonErrorCodeResponse(err.Error())
 			return
 		}
 
-		usernameMap, err := GetUsernamesForIds(rData, userIds)
-		if err != nil {
-			rData.SetJsonErrorCodeResponse(statuscodes.TECHNICAL)
-			return
-		}
-
-		rData.LogInfo("%v", usernameMap)
-
-		userList := make([]*SubAccountInfo, len(userIds))
-		for idx, publicUserInfo := range publicUserList {
-			subaccountInfo := &SubAccountInfo{
-				PublicAccountInfo: publicUserInfo,
+		userList := make([]SubAccountInfo, 0, len(userRecords))
+		for _, record := range userRecords {
+			uInfo := SubAccountInfo{
+				PublicAccountInfo: *GetUserInfo(record),
+				Username:          record.GetData().UsernameLookups[0],
 			}
-
-			usernames := usernameMap[userIds[idx]]
-			if len(usernames) != 1 {
-				rData.LogError("Length of subaccount usernames should be 1 but instead it is %d! User Info: %v", len(usernames), publicUserInfo)
-			}
-
-			if len(usernames) > 0 {
-				subaccountInfo.Username = usernames[0]
-			}
-
-			userList[idx] = subaccountInfo
-
+			userList = append(userList, uInfo)
 		}
 
 		rData.SetJsonSuccessResponse(pages.JsonMapGeneric{

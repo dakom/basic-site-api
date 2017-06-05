@@ -156,6 +156,8 @@ func DoRegister(rData *pages.RequestData, info *RegisterInfo) error {
 		userRecord.GetData().Password = passwordHash
 		userRecord.GetData().AddedDate = time.Now()
 		userRecord.GetData().DisplayName = displayName
+		userRecord.GetData().UsernameLookups = []string{info.Username}
+
 		/*Conceptually subaccounts could have been created as actual children of master accounts
 		  However that would require knowing the parentid in conjunction with the username
 		  And/or storing it with the lookup record ... and across the pipeline.
