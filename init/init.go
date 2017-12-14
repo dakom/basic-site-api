@@ -184,8 +184,7 @@ func gotPageRequest(w http.ResponseWriter, r *http.Request, pageConfigs map[stri
 
 	if rData.PageConfig.HandlerType == pages.HANDLER_TYPE_HTML_STRINGS {
 		//do nothing, for html it's templates and things
-	} else if rData.PageConfig.HandlerType == pages.HANDLER_TYPE_HTTP_STATUS {
-
+	} else if rData.PageConfig.HandlerType == pages.HANDLER_TYPE_HTTP_STATUS || (rData.PageConfig.HandlerType == pages.HANDLER_TYPE_HTTP_REDIRECT && rData.HttpStatusResponseCode != 200) {
 		rData.OutputHttpResponse()
 	} else if rData.PageConfig.HandlerType == pages.HANDLER_TYPE_JSON {
 		//json must mix in after processing
