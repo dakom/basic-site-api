@@ -1,3 +1,4 @@
+
 /*
 
 Oauth flow is like this:
@@ -234,6 +235,8 @@ func OauthResponse(rData *pages.RequestData) {
 }
 
 func OauthAction(rData *pages.RequestData) {
+	rData.LogInfo("JWT: %v", rData.JwtString)
+	
 	response := pages.JsonMapGeneric{}
 
 	state, err := getStateFromJwtRecord(rData.JwtRecord)
