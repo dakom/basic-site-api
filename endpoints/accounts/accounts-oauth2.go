@@ -120,7 +120,7 @@ func (s *StateInfo) ErrorUrl(statusCode string) string {
 	return s.Scheme + "status/" + statusCode
 }
 
-type UserInfo struct {
+type OAuthUserInfo struct {
 	Id        string `json:"uid,omitempty" datastore:",noindex"`
 	Email     string `json:"email,omitempty" datastore:",noindex"`
 	FirstName string `json:"fname,omitempty" datastore:",noindex"`
@@ -246,7 +246,7 @@ func OauthAction(rData *pages.RequestData) {
 	}
 
 	if state.Request == "userinfo" {
-		var userInfo UserInfo
+		var userInfo OAuthUserInfo
 		if err := json.Unmarshal([]byte(state.Response), &userInfo); err != nil {
 			rData.SetJsonErrorCodeResponse(statuscodes.AUTH)
 			return
@@ -265,7 +265,7 @@ func OauthAction(rData *pages.RequestData) {
 				response["meta"] = requestMeta
 			}
 
-			_, _, jwtString, err := DoLogin(rData, userInfo.Id, "", requestMeta.Audience, LOOKUP_TYPE_OAUTH)
+                        _, userRecordInfo, _, jwtString, err := DoLogin(rData, userInfo.Id, "", requestMeta.Audience, LOOKUP_TYPE_OAUTH)
 
 			if err != nil {
 				response["code"] = err.Error()
@@ -274,6 +274,7 @@ func OauthAction(rData *pages.RequestData) {
 			}
 
 			response["jwt"] = jwtString
+                        response["userInfo"] = userRecordInfo
 			rData.SetJsonSuccessResponse(response)
 			return
 
@@ -359,7 +360,7 @@ func getStateAndRecordFromJwtString(rData *pages.RequestData, stateJwtString str
 	return stateJwtRecord, nil, errors.New(statuscodes.AUTH)
 }
 
-func getUserInfoFromRequest(rData *pages.RequestData, state *StateInfo, code string) *UserInfo {
+func getUserInfoFromRequest(rData *pages.RequestData, state *StateInfo, code string) *OAuthUserInfo {
 
 	endpointConfig := getEndpointConfig(rData, state)
 	if endpointConfig == nil {
@@ -375,12 +376,12 @@ func getUserInfoFromRequest(rData *pages.RequestData, state *StateInfo, code str
 
 	client := endpointConfig.Client(rData.Ctx, tok)
 
-	var userInfo *UserInfo
+	var userInfo *OAuthUserInfo
 
 	if state.Provider == "google" {
 		googleUserInfo, err := getInfo_Google(rData, client)
 		if err == nil {
-			userInfo = &UserInfo{
+			userInfo = &OAuthUserInfo{
 				Id:        googleUserInfo.Id,
 				Email:     googleUserInfo.Email,
 				FirstName: googleUserInfo.GivenName,
@@ -391,7 +392,7 @@ func getUserInfoFromRequest(rData *pages.RequestData, state *StateInfo, code str
 	} else if state.Provider == "facebook" {
 		facebookUserInfo, err := getInfo_Facebook(rData, client, tok.AccessToken)
 		if err == nil {
-			userInfo = &UserInfo{
+			userInfo = &OAuthUserInfo{
 				Id:        facebookUserInfo.Id,
 				Email:     facebookUserInfo.Email,
 				FirstName: facebookUserInfo.FirstName,
