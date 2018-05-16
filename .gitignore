@@ -1,8 +1,26 @@
+
 ### JUST IN CASE WE EVER WANT TO DUMP SOME TEMP STUFF IN THERE
-GIT-IGNORE/
+vendor
 
 # production
 build
+dist
+
+# Vim
+# Swap
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-v][a-z]
+[._]sw[a-p]
+
+# Session
+Session.vim
+
+# Temporary
+.netrwhist
+*~
+# Auto-generated tag files
+tags
 
 # misc
 .env
