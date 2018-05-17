@@ -330,6 +330,7 @@ func OauthAction(rData *pages.RequestData) {
 			auth.DestroyToken(rData)
 
 			response["jwt"] = jwtString
+                        response["userInfo"] = GetUserInfoFromRecord(userRecord)
 			rData.SetJsonSuccessResponse(response)
 
 			if requestMeta.Audience == auth.JWT_AUDIENCE_COOKIE {
