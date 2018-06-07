@@ -313,6 +313,8 @@ func GetInitialDurationByAudience(audience string) int64 {
 	switch audience {
 	case JWT_AUDIENCE_APP:
 		return JWT_DURATION_LONG
+        case JWT_AUDIENCE_COOKIE:
+                return JWT_DURATION_LONG
 	default:
 		return JWT_DURATION_SHORT
 	}
